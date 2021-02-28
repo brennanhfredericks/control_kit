@@ -1,0 +1,20 @@
+use crate::ServiceError;
+use bindings::windows::win32::debug::GetLastError;
+
+pub fn str_to_wstring(name: &str) -> Vec<u16> {
+    let mut wstring: Vec<u16> = String::from(name).encode_utf16().collect();
+    wstring.push(0);
+    wstring
+}
+
+pub fn windows_get_last_error(debug: &str) -> Result<(), ServiceError> {
+    let error = unsafe { GetLastError() };
+
+    if error != 0x0 {
+        // error is the original windows api error, use log and debug str
+        println!("Error calling windows api: {}", error);
+        return Err(ServiceError::windows_get_last_error);
+    }
+
+    Ok(())
+}

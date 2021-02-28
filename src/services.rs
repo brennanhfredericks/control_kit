@@ -7,6 +7,8 @@ pub enum ServiceError {
     already_active,
     //errpr when, called to stop a service that is not active
     not_active,
+    //windows api call failed,
+    windows_get_last_error,
 }
 
 pub enum ServiceType {
