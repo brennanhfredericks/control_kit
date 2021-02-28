@@ -7,13 +7,16 @@ use bindings::{
     windows::BOOL,
 };
 
+use crate::{str_to_wstring, windows_get_last_error, Input, InputType, Process, ServiceError};
 use std::ffi::c_void;
 use std::mem;
 use std::result::Result;
 use std::slice;
+use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::{Arc, Mutex};
-//use std::thread;
-use crate::{str_to_wstring, windows_get_last_error, Process, ServiceError};
+use std::thread;
+
+use crate::telemetry::TelemetryInputMethod;
 //use to setup windows inter process communication and sychronization objects
 struct InterProcessCommunication {
     hmapping_obj: Option<HANDLE>,
@@ -125,12 +128,34 @@ impl InterProcessCommunication {
     }
 }
 
-pub struct SharedMemory {}
+pub struct SharedMemory {
+    transmitter: Option<Sender<Box<dyn Input + Send>>>,
+    handle: Option<thread::JoinHandle<()>>,
+    sentinal: Arc<Mutex<bool>>,
+}
 
-impl SharedMemory {}
+impl SharedMemory {
+    pub fn new() -> SharedMemory {
+        SharedMemory {
+            transmitter: None,
+            handle: None,
+            sentinal: Arc::new(Mutex::new(false)),
+        }
+    }
+}
 
-// impl Process for SharedMemory {
-//     fn start(&mut self) -> Result<(), ServiceError> {}
-//     fn stop(&mut self) -> Result<(), ServiceError> {}
-//     fn join(mut self) {}
-// }
+impl TelemetryInputMethod for SharedMemory {
+    fn start(&mut self) -> Result<(), ServiceError> {
+        Ok(())
+    }
+    fn stop(&mut self) -> Result<(), ServiceError> {
+        Ok(())
+    }
+    fn join(&self) {}
+    fn retrieval_method(&self) -> &str {
+        "memory-mapped file"
+    }
+    fn set_transmitter(&mut self, transmitter: Sender<Box<dyn Input + Send>>) {
+        self.transmitter = Some(transmitter);
+    }
+}

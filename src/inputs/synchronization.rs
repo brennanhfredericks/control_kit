@@ -53,7 +53,7 @@ impl Process for Synchronization {
 
             for input in receiver.try_iter() {
                 // if packet is none loop will exit
-                println!("input type recieved: {}", input.identity());
+                println!("input type recieved: {:?}", input.input_type());
             }
         };
 

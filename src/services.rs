@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 
 //responsible for starting and stoping services
-
+// data is passed between service via message passing channels
+// data is passed between applications via memory file, pipe or socket
 pub enum ServiceError {
     //error when, called to start a service that is already active
     already_active,
@@ -24,15 +25,16 @@ pub trait Process {
     fn join(self);
 }
 
+#[derive(Debug)]
 pub enum InputType {
     user,
     telemetry,
     image,
 }
 
+// input method type could be shared memory, pipe ,
 pub trait Input {
-    fn identity(&self) -> &str; // identify the specific
-
+    fn input_type(&self) -> InputType;
     // implement packet size
 
     // serialize input to a portable format (i.e json/xml or jpeg/png)
