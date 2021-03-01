@@ -47,7 +47,7 @@ pub trait Input {
 
 //every services has a process trait, to stop and start the specific services
 // all input services
-struct Services {
+pub struct Services {
     // hashmap to keep all  service objects (contain thread handle)
     services: HashMap<ServiceType, Box<dyn Process>>,
 }

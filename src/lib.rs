@@ -1,7 +1,7 @@
 // specify telemetry format, hard coded to euro truck simulator 2
 
 mod services;
-pub use services::{Input, InputType, Process, ServiceError, ServiceType};
+pub use services::{Input, InputType, Process, ServiceError, ServiceType, Services};
 
 mod utils;
 

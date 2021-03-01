@@ -201,28 +201,28 @@ impl TelemetryInputMethod for SharedMemory {
                                 // the server process sets the WriteEvent to signaled.
                                 let success = unsafe { ResetEvent(ipc.hwrite_event_obj.unwrap()) };
                                 if !success.as_bool() {
-                                    windows_get_last_error("ResetEvent - write event");
+                                    windows_get_last_error("ResetEvent - write event").unwrap();
                                 }
 
                                 // copy packet. plus awareness control loop can stop itself when telemetry broadcaster stops
                                 let DataPair(is_alive, packet) = p_paser.data(base_address);
                                 let (id, type_, time, length) = packet.preview();
                                 println!(
-                                    "type: {}, id: {}, length: {}, time: {}",
-                                    type_, id, length, time
+                                    "is_alive: {} type: {}, id: {}, length: {}, time: {}",
+                                    is_alive, type_, id, length, time
                                 );
 
                                 // Set client process ReadEvent to signaled. The server process blocks until the client process sets the ReadEvent to signaled before updating
                                 // the shared memory with telemetry data
                                 let success = unsafe { SetEvent(ipc.hread_event_obj.unwrap()) };
                                 if !success.as_bool() {
-                                    windows_get_last_error("SetEvent - read event");
+                                    windows_get_last_error("SetEvent - read event").unwrap();
                                 }
 
                                 // Release Mutex so that server process can update shared memory
                                 let success = unsafe { ReleaseMutex(ipc.hmutex_obj.unwrap()) };
                                 if !success.as_bool() {
-                                    windows_get_last_error("ReleaseMutex");
+                                    windows_get_last_error("ReleaseMutex").unwrap();
                                 }
 
                                 // check if loop should exit based on packet paser
@@ -233,7 +233,7 @@ impl TelemetryInputMethod for SharedMemory {
                             // all failure cases
                             _ => {
                                 println!("failure couldn't aquire all shared memory handles");
-                                windows_get_last_error("WaitForMultipleObjects");
+                                windows_get_last_error("WaitForMultipleObjects").unwrap();
                             }
                         }
                     }

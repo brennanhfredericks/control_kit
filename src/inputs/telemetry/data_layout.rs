@@ -170,9 +170,14 @@ mod ETS2 {
 
     impl Packet for telemetry_packet {
         fn parser(&mut self, address: *mut c_void) -> bool {
+            #[repr(C)]
             struct Pair(bool, telemetry_packet);
 
             let rdata: Pair = unsafe { ptr::read(address as *const _) };
+            println!(
+                "raw values: type: {}, id: {}, length: {}, time: {}",
+                rdata.1.type_, rdata.1.id, rdata.1.length, rdata.1.time
+            );
             *self = rdata.1; //telemetry_packet { ..packet };
             rdata.0
         }
