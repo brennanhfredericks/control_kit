@@ -3,6 +3,8 @@ use std::collections::HashMap;
 //responsible for starting and stoping services
 // data is passed between service via message passing channels
 // data is passed between applications via memory file, pipe or socket
+
+#[derive(Debug)]
 pub enum ServiceError {
     //error when, called to start a service that is already active
     already_active,
@@ -12,6 +14,7 @@ pub enum ServiceError {
     windows_get_last_error,
 }
 
+#[derive(Debug, PartialEq, Eq, Hash)]
 pub enum ServiceType {
     user_input,         // could be keyboard or controller
     telemetry_input,    // could be different games, for now only ets2_telemetry
@@ -22,7 +25,7 @@ pub enum ServiceType {
 pub trait Process {
     fn start(&mut self) -> Result<(), ServiceError>;
     fn stop(&mut self) -> Result<(), ServiceError>;
-    fn join(self);
+    fn join(&mut self);
 }
 
 #[derive(Debug)]
@@ -57,14 +60,41 @@ impl Services {
         }
     }
     //service needs to impliment process thread
-    pub fn add_service(&mut self, service_type: ServiceType, process: Box<dyn Process>) {}
+    pub fn add_service(
+        &mut self,
+        service_type: ServiceType,
+        mut process: Box<dyn Process>,
+    ) -> Result<(), ServiceError> {
+        process.start()?;
+        self.services.insert(service_type, process);
+
+        Ok(())
+    }
 
     //stops a running service else nothing
-    pub fn stop_service(&mut self, service_type: ServiceType) {}
+    pub fn stop_service(&mut self, service_type: ServiceType) -> Result<(), ServiceError> {
+        if self.services.contains_key(&service_type) {
+            let mut p = self.services.remove(&service_type).unwrap();
+            p.stop()?;
+
+            p.join();
+            println!("service stopped {:?}", service_type);
+        }
+
+        Ok(())
+    }
 
     //stop all services
-    pub fn stop_all_services(&mut self) {}
+    pub fn stop_all_services(&mut self) -> Result<(), ServiceError> {
+        for (k, v) in self.services.iter_mut() {
+            v.stop()?;
+            v.join();
+            println!("service stopped {:?}", k);
+        }
+
+        Ok(())
+    }
 
     //block until all services has joined
-    pub fn block_wait() {}
+    //pub fn block_wait() {}
 }

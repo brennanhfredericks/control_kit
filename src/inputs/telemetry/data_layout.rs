@@ -1,7 +1,46 @@
 use std::ffi::c_void;
+use std::fmt;
 use std::{mem, ptr};
 
-pub mod ETS2 {
+#[derive(Debug, Clone, Copy)]
+pub enum SelectGame {
+    ets2,
+}
+pub struct DataPair(pub bool, pub Box<dyn Packet>);
+pub trait Packet {
+    fn parser(&mut self, address: *mut c_void) -> bool;
+    fn preview(&self) -> (u64, u32, u64, u32);
+}
+#[derive(Debug, Clone, Copy)]
+pub struct PacketParser {
+    game: SelectGame,
+}
+
+impl PacketParser {
+    pub fn new(selected_game: SelectGame) -> PacketParser {
+        PacketParser {
+            game: selected_game,
+        }
+    }
+
+    pub fn data(self, address: *mut c_void) -> DataPair {
+        // could use a match statement for enum type i.e. game telemetry data format
+
+        let mut p = match self.game {
+            SelectGame::ets2 => ETS2::telemetry_packet::new(),
+        };
+
+        let is_alive = p.parser(address);
+
+        DataPair {
+            0: is_alive,
+            1: Box::new(p),
+        }
+    }
+}
+
+mod ETS2 {
+    use super::*;
     pub enum event_type {
         Paused = 3,
         Started = 4,
@@ -94,12 +133,14 @@ pub mod ETS2 {
         // 216 bytes
     }
 
+    #[derive(Clone, Copy)]
     #[repr(C)]
     pub union event_data {
         pub frame_end_data: frame_end,
         pub frame_start_data: frame_start,
         pub no_data: u32,
     }
+    #[derive(Clone, Copy)]
     #[repr(C)]
     pub struct telemetry_packet {
         pub type_: u32,
@@ -107,5 +148,37 @@ pub mod ETS2 {
         pub id: u64,
         pub time: u64,
         pub data: event_data,
+    }
+
+    impl telemetry_packet {
+        pub fn new() -> telemetry_packet {
+            let x: telemetry_packet = unsafe { mem::zeroed() };
+            x
+        }
+    }
+
+    impl fmt::Debug for telemetry_packet {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            f.debug_struct("telemetry_packet")
+                .field("type", &self.type_)
+                .field("length", &self.length)
+                .field("id", &self.id)
+                .field("time", &self.time)
+                .finish()
+        }
+    }
+
+    impl Packet for telemetry_packet {
+        fn parser(&mut self, address: *mut c_void) -> bool {
+            struct Pair(bool, telemetry_packet);
+
+            let rdata: Pair = unsafe { ptr::read(address as *const _) };
+            *self = rdata.1; //telemetry_packet { ..packet };
+            rdata.0
+        }
+
+        fn preview(&self) -> (u64, u32, u64, u32) {
+            (self.id, self.type_, self.time, self.length)
+        }
     }
 }

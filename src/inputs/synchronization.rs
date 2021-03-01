@@ -72,10 +72,9 @@ impl Process for Synchronization {
         Ok(())
     }
 
-    fn join(mut self) {
+    fn join(&mut self) {
         if self.handle.is_some() {
-            self.handle.unwrap().join().unwrap();
-            self.handle = None;
+            self.handle.take().unwrap().join().unwrap();
         }
     }
 }
