@@ -4,7 +4,7 @@ use std::io::{BufRead, BufReader, Error, ErrorKind};
 use std::process::{Command, Stdio};
 use std::rc::Rc;
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 fn main() {
     println!("main test");
@@ -51,14 +51,14 @@ fn main() {
     }
 
     assert!(i == 23182);
-
     // reader
     //     .lines()
     //     .for_each(|line| println!("server send: {}", line.ok().unwrap()));
 
     cap_sess.block_until_telemetry_finished().unwrap();
     println!("telemetry service stopped");
-
+    //let t = Instant::now();
+    //Instant::now().duration_since(t)
     //let output = child.wait_with_output().expect("failed to wait for child");
 
     // String::from_utf8(output.stdout)
