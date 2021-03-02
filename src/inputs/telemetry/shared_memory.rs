@@ -207,10 +207,8 @@ impl TelemetryInputMethod for SharedMemory {
                                 // copy packet. plus awareness control loop can stop itself when telemetry broadcaster stops
                                 let DataPair(is_alive, packet) = p_paser.data(base_address);
                                 let (id, type_, time, length) = packet.preview();
-                                println!(
-                                    "is_alive: {} type: {}, id: {}, length: {}, time: {}",
-                                    is_alive, type_, id, length, time
-                                );
+
+                                println!("is_alive: {} type: {}, id: {}", is_alive, type_, id);
 
                                 // Set client process ReadEvent to signaled. The server process blocks until the client process sets the ReadEvent to signaled before updating
                                 // the shared memory with telemetry data

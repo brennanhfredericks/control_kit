@@ -39,6 +39,10 @@ impl PacketParser {
     }
 }
 
+trait Test {
+    fn test_str_eq(&self) -> String;
+}
+
 mod ETS2 {
     use super::*;
     pub enum event_type {
@@ -174,16 +178,19 @@ mod ETS2 {
             struct Pair(bool, telemetry_packet);
 
             let rdata: Pair = unsafe { ptr::read(address as *const _) };
-            println!(
-                "raw values: type: {}, id: {}, length: {}, time: {}",
-                rdata.1.type_, rdata.1.id, rdata.1.length, rdata.1.time
-            );
             *self = rdata.1; //telemetry_packet { ..packet };
             rdata.0
         }
 
         fn preview(&self) -> (u64, u32, u64, u32) {
             (self.id, self.type_, self.time, self.length)
+        }
+    }
+
+    impl Test for telemetry_packet {
+        fn test_str_eq(&self) -> String {
+            let res = format!("{}-{}-{}-{}", self.id, self.type_, self.length, self.time);
+            res
         }
     }
 }

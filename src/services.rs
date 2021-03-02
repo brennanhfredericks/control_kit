@@ -73,14 +73,15 @@ impl Services {
 
     //stops a running service else nothing
     pub fn stop_service(&mut self, service_type: ServiceType) -> Result<(), ServiceError> {
-        if self.services.contains_key(&service_type) {
-            let mut p = self.services.remove(&service_type).unwrap();
-            p.stop()?;
-
-            p.join();
-            println!("service stopped {:?}", service_type);
+        if !self.services.contains_key(&service_type) {
+            return Err(ServiceError::not_active);
         }
 
+        let mut p = self.services.remove(&service_type).unwrap();
+        p.stop()?;
+
+        p.join();
+        println!("service stopped {:?}", service_type);
         Ok(())
     }
 
@@ -95,6 +96,15 @@ impl Services {
         Ok(())
     }
 
-    //block until all services has joined
-    //pub fn block_wait() {}
+    //block until telemetry service is done
+    pub fn block_until_telemetry_finished(&mut self) -> Result<(), ServiceError> {
+        if !self.services.contains_key(&ServiceType::telemetry_input) {
+            return Err(ServiceError::not_active);
+        }
+
+        let mut service_handle = self.services.remove(&ServiceType::telemetry_input).unwrap();
+
+        service_handle.join();
+        Ok(())
+    }
 }
