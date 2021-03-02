@@ -40,6 +40,7 @@ impl Telemetry {
 
 impl Input for Telemetry {
     fn input_type(&self) -> InputType {
+        //the all variants of telemetry_input returns InputTyoe::telemtry
         InputType::telemetry
     }
 }

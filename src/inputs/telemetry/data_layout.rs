@@ -2,12 +2,13 @@ use std::ffi::c_void;
 use std::fmt;
 use std::{mem, ptr};
 
+use crate::{Input, InputType};
 #[derive(Debug, Clone, Copy)]
 pub enum SelectGame {
     ets2,
 }
 pub struct DataPair(pub bool, pub Box<dyn Packet>);
-pub trait Packet {
+pub trait Packet: Input {
     fn parser(&mut self, address: *mut c_void) -> bool;
     fn preview(&self) -> (u64, u32, u64, u32);
 }
@@ -184,6 +185,12 @@ mod ETS2 {
 
         fn preview(&self) -> (u64, u32, u64, u32) {
             (self.id, self.type_, self.time, self.length)
+        }
+    }
+
+    impl Input for telemetry_packet {
+        fn input_type(&self) -> InputType {
+            InputType::telemetry
         }
     }
 
