@@ -5,6 +5,7 @@ use std::process::{Command, Stdio};
 use std::rc::Rc;
 use std::thread;
 use std::time::Duration;
+
 fn main() {
     println!("main test");
 
@@ -23,7 +24,7 @@ fn main() {
     //     .spawn()
     //     .expect("failed to execute child");
 
-    let stdout = Command::new(".\\tests.\\TelemetryEmulation_ets2_hard_data_ref.exe")
+    let stdout = Command::new(".\\tests.\\TelemetryEmulation.exe")
         .stdout(Stdio::piped())
         .spawn()
         .unwrap()
@@ -37,9 +38,23 @@ fn main() {
 
     let reader = BufReader::new(stdout);
 
-    reader
-        .lines()
-        .for_each(|line| println!("server send: {}", line.ok().unwrap()));
+    let mut i: u64 = 0;
+    for line in reader.lines() {
+        let x = line.expect("irrelevant error - may ignore");
+        let numbers: Vec<u64> = x
+            .split('-')
+            .map(|val| str::parse::<u64>(val).unwrap())
+            .collect();
+
+        assert!(i == numbers[0]);
+        i += 1;
+    }
+
+    assert!(i == 23182);
+
+    // reader
+    //     .lines()
+    //     .for_each(|line| println!("server send: {}", line.ok().unwrap()));
 
     cap_sess.block_until_telemetry_finished().unwrap();
     println!("telemetry service stopped");
