@@ -23,7 +23,7 @@ pub trait TelemetryInputMethod {
 }
 
 pub struct Telemetry {
-    telemetry_input: Box<dyn TelemetryInputMethod>,
+    telemetry_input: Box<dyn TelemetryInputMethod + Send>,
 }
 
 impl Telemetry {
@@ -33,7 +33,7 @@ impl Telemetry {
         }
     }
 
-    fn set_transmitter(&mut self, transmitter: Sender<Box<dyn Input + Send>>) {
+    pub fn set_transmitter(&mut self, transmitter: Sender<Box<dyn Input + Send>>) {
         self.telemetry_input.set_transmitter(transmitter);
     }
 }

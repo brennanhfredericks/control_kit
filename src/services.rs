@@ -12,6 +12,8 @@ pub enum ServiceError {
     not_active,
     //windows api call failed,
     windows_get_last_error,
+    // transmitter (for data passing between thread) has not been set for service
+    transmitter_not_set,
 }
 
 #[derive(Debug, PartialEq, Eq, Hash)]
@@ -105,6 +107,7 @@ impl Services {
         let mut service_handle = self.services.remove(&ServiceType::telemetry_input).unwrap();
 
         service_handle.join();
+
         Ok(())
     }
 }

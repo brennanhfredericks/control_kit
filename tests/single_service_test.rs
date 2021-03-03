@@ -1,3 +1,4 @@
+use control::synchronization::Synchronization;
 use control::telemetry::{SelectGame, Telemetry};
 use control::{ServiceType, Services};
 use std::thread;
@@ -13,7 +14,13 @@ fn telemetry_service_shutdown_when_completed() {
     //game selection
     let sel_game = SelectGame::ets2;
     // setup telemetry
-    let ets2_telemetry = Telemetry::via_shared_memory(sel_game);
+    let mut ets2_telemetry = Telemetry::via_shared_memory(sel_game);
+
+    let sync = Synchronization::new();
+
+    let tx = sync.get_transmitter();
+
+    ets2_telemetry.set_transmitter(tx);
 
     let mut cap_sess = Services::new();
 
@@ -39,13 +46,21 @@ fn telemetry_service_shutdown_when_completed() {
     assert!(i == 23182);
 
     cap_sess.block_until_telemetry_finished().unwrap();
+
+    //cap_sess.stop_all_services();
 }
 
 #[test]
 fn telemetry_service_shutdown_interrupt_all_services() {
     let sel_game = SelectGame::ets2;
     // setup telemetry
-    let ets2_telemetry = Telemetry::via_shared_memory(sel_game);
+    let mut ets2_telemetry = Telemetry::via_shared_memory(sel_game);
+
+    let sync = Synchronization::new();
+
+    let tx = sync.get_transmitter();
+
+    ets2_telemetry.set_transmitter(tx);
 
     let mut cap_sess = Services::new();
     thread::sleep(Duration::from_secs(1));
@@ -65,7 +80,13 @@ fn telemetry_service_shutdown_interrupt_all_services() {
 fn telemetry_service_shutdown_interrupt_stop_service() {
     let sel_game = SelectGame::ets2;
     // setup telemetry
-    let ets2_telemetry = Telemetry::via_shared_memory(sel_game);
+    let mut ets2_telemetry = Telemetry::via_shared_memory(sel_game);
+
+    let sync = Synchronization::new();
+
+    let tx = sync.get_transmitter();
+
+    ets2_telemetry.set_transmitter(tx);
 
     let mut cap_sess = Services::new();
     thread::sleep(Duration::from_secs(1));

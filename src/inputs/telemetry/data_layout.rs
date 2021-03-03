@@ -7,7 +7,7 @@ use crate::{Input, InputType};
 pub enum SelectGame {
     ets2,
 }
-pub struct DataPair(pub bool, pub Box<dyn Packet>);
+pub struct DataPair(pub bool, pub Box<dyn Input + Send>);
 pub trait Packet: Input {
     fn parser(&mut self, address: *mut c_void) -> bool;
     fn preview(&self) -> (u64, u32, u64, u32);

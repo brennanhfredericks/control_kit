@@ -151,9 +151,16 @@ impl SharedMemory {
 impl TelemetryInputMethod for SharedMemory {
     //error not triggered
     fn start(&mut self) -> Result<(), ServiceError> {
+        if self.transmitter.is_none() {
+            return Err(ServiceError::transmitter_not_set);
+        }
+
+        //copy variable so struct can keep ownership of its members
         let sentinal = Arc::clone(&self.sentinal);
         let p_paser = self.p_paser.clone();
-        let sel_game = self.selected_game.clone();
+        //let sel_game = self.selected_game.clone();
+        let tx = self.transmitter.as_ref().unwrap().clone();
+
         let handle = thread::spawn(move || {
             let mut ipc = InterProcessCommunication::new();
 
@@ -206,7 +213,14 @@ impl TelemetryInputMethod for SharedMemory {
 
                                 // copy packet. plus awareness control loop can stop itself when telemetry broadcaster stops
                                 let DataPair(is_alive, packet) = p_paser.data(base_address);
-                                let (id, type_, time, length) = packet.preview();
+
+                                match tx.send(packet) {
+                                    Err(err) => {
+                                        println!("shared memory loop transmit error {}", err);
+                                    }
+                                    _ => (),
+                                }
+                                //let (id, type_, time, length) = packet.preview();
 
                                 // println!("is_alive: {} type: {}, id: {}", is_alive, type_, id);
 

@@ -7,7 +7,7 @@ use crate::{Input, InputType, Process, ServiceError};
 
 // Responsible for aligning data in a sensible manner.
 // i.e when telemetry indicates pause state all other inputs should be discared or stopped
-struct Synchronization {
+pub struct Synchronization {
     transmitter: Sender<Box<dyn Input + Send>>,
     receiver: Option<Receiver<Box<dyn Input + Send>>>,
     sentinal: Arc<Mutex<bool>>,
