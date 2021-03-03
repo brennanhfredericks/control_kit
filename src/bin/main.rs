@@ -29,13 +29,31 @@ fn main() -> CResult<()> {
     let mut cap_sess = Services::new();
 
     // start sync services
-    // cap_sess
-    //     .add_service(ServiceType::synchronize_inputs, Box::new(sync))
-    //     .unwrap();
+    cap_sess
+        .add_service(ServiceType::synchronize_inputs, Box::new(sync))
+        .unwrap();
 
+    // start telemetry emulation thread
+    let mut emulation_thread = Command::new(".\\tests.\\TelemetryEmulation.exe")
+        .spawn()
+        .unwrap();
+
+    //wait for telemetry emulation to setup and complete
+    thread::sleep(Duration::from_secs(1));
+
+    //start telemetry services
     cap_sess
         .add_service(ServiceType::telemetry_input, Box::new(ets2_telemetry))
         .unwrap();
+
+    // wait till telemetry is done
+    cap_sess.block_until_telemetry_finished().unwrap();
+
+    // stop all running service
+    cap_sess.stop_all_services().unwrap();
+
+    //join emulation thread
+    emulation_thread.wait().unwrap();
 
     Ok(())
 }
