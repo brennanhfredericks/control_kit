@@ -13,6 +13,7 @@ impl SelectGame {
     pub fn get_events(&self) {}
 }
 
+#[derive(Debug, PartialEq, Eq)]
 pub enum EventGame {
     PausedEvent,
     StartedEvent,
@@ -25,7 +26,6 @@ pub enum EventGame {
 pub struct DataPair(pub bool, pub Box<dyn Input + Send>);
 pub trait Packet: Input {
     fn parser(&mut self, address: *mut c_void) -> bool;
-    fn preview(&self) -> (u64, u32, u64, u32);
 }
 #[derive(Debug, Clone, Copy)]
 pub struct PacketParser {

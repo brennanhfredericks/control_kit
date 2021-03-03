@@ -133,7 +133,6 @@ pub struct SharedMemory {
     handle: Option<thread::JoinHandle<()>>,
     sentinal: Arc<Mutex<bool>>,
     p_paser: PacketParser,
-    selected_game: SelectGame,
 }
 
 impl SharedMemory {
@@ -142,8 +141,7 @@ impl SharedMemory {
             transmitter: None,
             handle: None,
             sentinal: Arc::new(Mutex::new(false)),
-            p_paser: PacketParser::new(game.clone()),
-            selected_game: game,
+            p_paser: PacketParser::new(game),
         }
     }
 }
@@ -220,9 +218,6 @@ impl TelemetryInputMethod for SharedMemory {
                                     }
                                     _ => (),
                                 }
-                                //let (id, type_, time, length) = packet.preview();
-
-                                // println!("is_alive: {} type: {}, id: {}", is_alive, type_, id);
 
                                 // Set client process ReadEvent to signaled. The server process blocks until the client process sets the ReadEvent to signaled before updating
                                 // the shared memory with telemetry data

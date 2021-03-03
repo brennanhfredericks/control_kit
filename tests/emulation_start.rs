@@ -1,5 +1,5 @@
 use std::io::{BufRead, BufReader, Error, ErrorKind};
-use std::process::{ChildStdout, Command, Stdio};
+use std::process::{Child, ChildStdout, Command, Stdio};
 
 pub struct ETS2Emulation;
 
@@ -13,5 +13,16 @@ impl ETS2Emulation {
             .unwrap();
 
         BufReader::new(stdout)
+    }
+
+    pub fn start() -> Child {
+        let child = Command::new(".\\tests.\\TelemetryEmulation.exe")
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .stdin(Stdio::null())
+            .spawn()
+            .unwrap();
+
+        child
     }
 }

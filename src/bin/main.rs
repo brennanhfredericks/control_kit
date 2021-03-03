@@ -4,6 +4,7 @@ use control::{ServiceType, Services};
 use std::io::{BufRead, BufReader, Error, ErrorKind};
 use std::process::{Command, Stdio};
 use std::rc::Rc;
+use std::sync::mpsc::channel;
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -12,15 +13,16 @@ type CResult<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 fn main() -> CResult<()> {
     println!("main run");
 
-    // test only service start stop and telementry
+    let (out_transmitter, out_receiver) = channel();
 
     //game selection
     let sel_game = SelectGame::ETS2;
     // setup telemetry
 
-    let sync = Synchronization::new();
+    let mut sync = Synchronization::new();
 
-    let tx = sync.get_transmitter();
+    let tx = sync.get_input_transmitter();
+    sync.set_output_transmitter(out_transmitter);
 
     let mut ets2_telemetry = Telemetry::via_shared_memory(sel_game);
 
@@ -35,6 +37,7 @@ fn main() -> CResult<()> {
 
     // start telemetry emulation thread
     let mut emulation_thread = Command::new(".\\tests.\\TelemetryEmulation.exe")
+        .stdout(Stdio::null()) //ignore stream, otherwise windows blocks
         .spawn()
         .unwrap();
 
@@ -54,6 +57,12 @@ fn main() -> CResult<()> {
 
     //join emulation thread
     emulation_thread.wait().unwrap();
+
+    for i in out_receiver.iter() {
+        assert!(i[0].header().0 + 1 == i.last().unwrap().header().0);
+        // println!("f - id: {}", i[0].header().0);
+        // println!("l - id: {}", i.last().unwrap().header().0);
+    }
 
     Ok(())
 }

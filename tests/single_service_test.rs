@@ -18,7 +18,7 @@ fn telemetry_service_shutdown_when_completed() {
 
     let sync = Synchronization::new();
 
-    let tx = sync.get_transmitter();
+    let tx = sync.get_input_transmitter();
 
     ets2_telemetry.set_transmitter(tx);
 
@@ -58,7 +58,7 @@ fn telemetry_service_shutdown_interrupt_all_services() {
 
     let sync = Synchronization::new();
 
-    let tx = sync.get_transmitter();
+    let tx = sync.get_input_transmitter();
 
     ets2_telemetry.set_transmitter(tx);
 
@@ -84,7 +84,7 @@ fn telemetry_service_shutdown_interrupt_stop_service() {
 
     let sync = Synchronization::new();
 
-    let tx = sync.get_transmitter();
+    let tx = sync.get_input_transmitter();
 
     ets2_telemetry.set_transmitter(tx);
 

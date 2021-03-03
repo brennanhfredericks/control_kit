@@ -1,6 +1,6 @@
-use std::collections::HashMap;
-
 use crate::telemetry::EventGame;
+use std::collections::HashMap;
+use std::fmt;
 
 //responsible for starting and stoping services
 // data is passed between service via message passing channels
@@ -43,6 +43,8 @@ pub enum InputType {
 pub trait Input {
     fn input_type(&self) -> InputType;
     fn event_type(&self) -> EventGame;
+    fn header(&self) -> (u64, u32, u64, u32);
+
     // implement packet size
 
     // serialize input to a portable format (i.e json/xml or jpeg/png)
