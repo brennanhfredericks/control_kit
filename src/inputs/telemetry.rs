@@ -1,15 +1,15 @@
-use crate::{Input, InputType, Process, ServiceError};
-use std::sync::mpsc::{channel, Receiver, Sender};
+use crate::{Input, Process, ServiceError};
+use std::sync::mpsc::Sender;
 
 #[path = "telemetry/data_layout.rs"]
 mod data_layout;
 
-pub use data_layout::{DataPair, PacketParser, SelectGame};
+pub use data_layout::{DataPair, EventGame, Packet, PacketParser, SelectGame};
 
 #[path = "telemetry/shared_memory.rs"]
 mod shared_memory;
 
-pub use shared_memory::SharedMemory;
+use shared_memory::SharedMemory;
 
 // wrapper trait for Input, it is expected that Telemetry can be retrieved via
 // memory-mapped file, pipe or socket
@@ -35,13 +35,6 @@ impl Telemetry {
 
     pub fn set_transmitter(&mut self, transmitter: Sender<Box<dyn Input + Send>>) {
         self.telemetry_input.set_transmitter(transmitter);
-    }
-}
-
-impl Input for Telemetry {
-    fn input_type(&self) -> InputType {
-        //the all variants of telemetry_input returns InputTyoe::telemtry
-        InputType::telemetry
     }
 }
 

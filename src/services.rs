@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use crate::telemetry::EventGame;
+
 //responsible for starting and stoping services
 // data is passed between service via message passing channels
 // data is passed between applications via memory file, pipe or socket
@@ -7,22 +9,22 @@ use std::collections::HashMap;
 #[derive(Debug)]
 pub enum ServiceError {
     //error when, called to start a service that is already active
-    already_active,
+    AlreadyActive,
     //errpr when, called to stop a service that is not active
-    not_active,
+    NotActive,
     //windows api call failed,
-    windows_get_last_error,
+    WindowsGetLastError,
     // transmitter (for data passing between thread) has not been set for service
-    transmitter_not_set,
+    TransmitterNotSet,
 }
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub enum ServiceType {
-    user_input,         // could be keyboard or controller
-    telemetry_input,    // could be different games, for now only ets2_telemetry
-    image_input,        // screenshot
-    synchronize_inputs, // use to synchronize and groupify the inputs
-    feedback,           // use display the user and telemetry outputs and image
+    UserInput,      // could be keyboard or controller
+    TelemetryInput, // could be different games, for now only ets2_telemetry
+    ImageInput,     // screenshot
+    SynchronizeInputs, // use to synchronize and groupify the inputs
+                    // use display the user and telemetry outputs and image
 }
 pub trait Process {
     fn start(&mut self) -> Result<(), ServiceError>;
@@ -32,14 +34,15 @@ pub trait Process {
 
 #[derive(Debug)]
 pub enum InputType {
-    user,
-    telemetry,
-    image,
+    User,
+    Telemetry,
+    Image,
 }
 
 // input method type could be shared memory, pipe ,
 pub trait Input {
     fn input_type(&self) -> InputType;
+    fn event_type(&self) -> EventGame;
     // implement packet size
 
     // serialize input to a portable format (i.e json/xml or jpeg/png)
@@ -76,7 +79,7 @@ impl Services {
     //stops a running service else nothing
     pub fn stop_service(&mut self, service_type: ServiceType) -> Result<(), ServiceError> {
         if !self.services.contains_key(&service_type) {
-            return Err(ServiceError::not_active);
+            return Err(ServiceError::NotActive);
         }
 
         let mut p = self.services.remove(&service_type).unwrap();
@@ -100,11 +103,11 @@ impl Services {
 
     //block until telemetry service is done
     pub fn block_until_telemetry_finished(&mut self) -> Result<(), ServiceError> {
-        if !self.services.contains_key(&ServiceType::telemetry_input) {
-            return Err(ServiceError::not_active);
+        if !self.services.contains_key(&ServiceType::TelemetryInput) {
+            return Err(ServiceError::NotActive);
         }
 
-        let mut service_handle = self.services.remove(&ServiceType::telemetry_input).unwrap();
+        let mut service_handle = self.services.remove(&ServiceType::TelemetryInput).unwrap();
 
         service_handle.join();
 

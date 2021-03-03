@@ -1,6 +1,5 @@
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::{Arc, Mutex};
-
 use std::thread;
 
 use crate::{Input, InputType, Process, ServiceError};
@@ -35,7 +34,7 @@ impl Synchronization {
 impl Process for Synchronization {
     fn start(&mut self) -> Result<(), ServiceError> {
         if self.receiver.is_none() {
-            return Err(ServiceError::already_active);
+            return Err(ServiceError::AlreadyActive);
         }
 
         let receiver = self.receiver.take().unwrap();
@@ -54,6 +53,7 @@ impl Process for Synchronization {
             for input in receiver.try_iter() {
                 // if packet is none loop will exit
                 println!("input type recieved: {:?}", input.input_type());
+                println!(" zero {:?}", input.input_type());
             }
         };
 
@@ -64,7 +64,7 @@ impl Process for Synchronization {
 
     fn stop(&mut self) -> Result<(), ServiceError> {
         if self.receiver.is_some() {
-            return Err(ServiceError::not_active);
+            return Err(ServiceError::NotActive);
         }
         {
             *self.sentinal.lock().unwrap() = false;

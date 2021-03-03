@@ -7,12 +7,12 @@ use bindings::{
     windows::BOOL,
 };
 
-use crate::{str_to_wstring, windows_get_last_error, Input, InputType, Process, ServiceError};
+use crate::{str_to_wstring, windows_get_last_error, Input, ServiceError};
 use std::ffi::c_void;
-use std::mem;
+
 use std::result::Result;
-use std::slice;
-use std::sync::mpsc::{channel, Receiver, Sender};
+
+use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex};
 use std::thread;
 
@@ -152,7 +152,7 @@ impl TelemetryInputMethod for SharedMemory {
     //error not triggered
     fn start(&mut self) -> Result<(), ServiceError> {
         if self.transmitter.is_none() {
-            return Err(ServiceError::transmitter_not_set);
+            return Err(ServiceError::TransmitterNotSet);
         }
 
         //copy variable so struct can keep ownership of its members

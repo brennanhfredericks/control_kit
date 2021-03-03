@@ -6,13 +6,13 @@ use std::time::{Duration, Instant};
 
 mod emulation_start;
 
-use emulation_start::ets2_emulation;
+use emulation_start::ETS2Emulation;
 use std::io::BufRead;
 
 #[test]
 fn telemetry_service_shutdown_when_completed() {
     //game selection
-    let sel_game = SelectGame::ets2;
+    let sel_game = SelectGame::ETS2;
     // setup telemetry
     let mut ets2_telemetry = Telemetry::via_shared_memory(sel_game);
 
@@ -24,11 +24,11 @@ fn telemetry_service_shutdown_when_completed() {
 
     let mut cap_sess = Services::new();
 
-    let reader = ets2_emulation::start_with_stdout();
+    let reader = ETS2Emulation::start_with_stdout();
 
     thread::sleep(Duration::from_secs(1));
     cap_sess
-        .add_service(ServiceType::telemetry_input, Box::new(ets2_telemetry))
+        .add_service(ServiceType::TelemetryInput, Box::new(ets2_telemetry))
         .unwrap();
 
     let mut i: u64 = 0;
@@ -52,7 +52,7 @@ fn telemetry_service_shutdown_when_completed() {
 
 #[test]
 fn telemetry_service_shutdown_interrupt_all_services() {
-    let sel_game = SelectGame::ets2;
+    let sel_game = SelectGame::ETS2;
     // setup telemetry
     let mut ets2_telemetry = Telemetry::via_shared_memory(sel_game);
 
@@ -65,11 +65,11 @@ fn telemetry_service_shutdown_interrupt_all_services() {
     let mut cap_sess = Services::new();
     thread::sleep(Duration::from_secs(1));
     cap_sess
-        .add_service(ServiceType::telemetry_input, Box::new(ets2_telemetry))
+        .add_service(ServiceType::TelemetryInput, Box::new(ets2_telemetry))
         .unwrap();
     let t = Instant::now();
     thread::sleep(Duration::from_millis(50));
-    cap_sess.stop_all_services();
+    cap_sess.stop_all_services().unwrap();
 
     let g = Instant::now().duration_since(t).as_millis();
 
@@ -78,7 +78,7 @@ fn telemetry_service_shutdown_interrupt_all_services() {
 
 #[test]
 fn telemetry_service_shutdown_interrupt_stop_service() {
-    let sel_game = SelectGame::ets2;
+    let sel_game = SelectGame::ETS2;
     // setup telemetry
     let mut ets2_telemetry = Telemetry::via_shared_memory(sel_game);
 
@@ -91,11 +91,11 @@ fn telemetry_service_shutdown_interrupt_stop_service() {
     let mut cap_sess = Services::new();
     thread::sleep(Duration::from_secs(1));
     cap_sess
-        .add_service(ServiceType::telemetry_input, Box::new(ets2_telemetry))
+        .add_service(ServiceType::TelemetryInput, Box::new(ets2_telemetry))
         .unwrap();
     let t = Instant::now();
     thread::sleep(Duration::from_millis(50));
-    cap_sess.stop_service(ServiceType::telemetry_input);
+    cap_sess.stop_service(ServiceType::TelemetryInput).unwrap();
 
     let g = Instant::now().duration_since(t).as_millis();
 

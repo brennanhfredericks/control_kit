@@ -2,9 +2,10 @@
 # TODO
     - implement keyboard/controller input capture
     - implement main monitor screen capture
-    - implement synchronization
     - implement logging
+
 # Implemented
+    -  implemented synchronization minimum with out data groupifying
 
 
 # Implemented with test cases

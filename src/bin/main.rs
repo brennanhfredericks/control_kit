@@ -15,7 +15,7 @@ fn main() -> CResult<()> {
     // test only service start stop and telementry
 
     //game selection
-    let sel_game = SelectGame::ets2;
+    let sel_game = SelectGame::ETS2;
     // setup telemetry
 
     let sync = Synchronization::new();
@@ -30,7 +30,7 @@ fn main() -> CResult<()> {
 
     // start sync services
     cap_sess
-        .add_service(ServiceType::synchronize_inputs, Box::new(sync))
+        .add_service(ServiceType::SynchronizeInputs, Box::new(sync))
         .unwrap();
 
     // start telemetry emulation thread
@@ -43,7 +43,7 @@ fn main() -> CResult<()> {
 
     //start telemetry services
     cap_sess
-        .add_service(ServiceType::telemetry_input, Box::new(ets2_telemetry))
+        .add_service(ServiceType::TelemetryInput, Box::new(ets2_telemetry))
         .unwrap();
 
     // wait till telemetry is done
