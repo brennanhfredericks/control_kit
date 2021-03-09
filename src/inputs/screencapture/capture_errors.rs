@@ -14,11 +14,13 @@ pub enum CaptureError {
     DxgiError,             // fall throught to cover other errors
     JpegEncoder,           // could not encode raw bytes as jpeg bytes buffer
     JpegBuffer,            // could not get jpeg buffer (Vec<u8>)
+    NoDebugLayer,
+    InvalidParameter,
 }
 
 impl CaptureError {
     /// maps DXGI_ERROR to CaptureError
-    fn from_dxgi_error(hr: i32) -> CaptureError {
+    pub fn from_win_error(hr: i32) -> CaptureError {
         match hr {
             winerror::DXGI_ERROR_ACCESS_LOST => CaptureError::AccessLost,
             winerror::DXGI_ERROR_DEVICE_REMOVED => CaptureError::DeviceRemoved,
@@ -27,6 +29,8 @@ impl CaptureError {
             winerror::DXGI_ERROR_NOT_FOUND => CaptureError::NotFound,
             winerror::DXGI_ERROR_WAIT_TIMEOUT => CaptureError::WaitTimeout,
             winerror::DXGI_ERROR_WAS_STILL_DRAWING => CaptureError::WasStillDrawing,
+            winerror::E_FAIL => CaptureError::NoDebugLayer,
+            winerror::E_INVALIDARG => CaptureError::InvalidParameter,
             _ => CaptureError::DxgiError,
         }
     }

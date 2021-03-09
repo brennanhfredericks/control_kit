@@ -32,9 +32,9 @@ impl D3D11Device {
             )
         };
 
-        // need to implement error handling
-        if success < 0 {
-            windows_get_last_error("D311CreateDevice").unwrap();
+        if success != 0x0 {
+            //add log unable to d3d11 create device
+            return Err(CaptureError::from_win_error(success));
         }
 
         let device: ComPtr<d3d11::ID3D11Device> = unsafe { ComPtr::from_raw(device) };

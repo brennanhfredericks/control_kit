@@ -8,7 +8,7 @@ pub fn str_to_wstring(name: &str) -> Vec<u16> {
 }
 
 pub fn windows_get_last_error(debug: &str) -> Result<(), ServiceError> {
-    let error = unsafe { GetLastError() };
+    let error: i32 = unsafe { GetLastError() as i32 };
 
     if error != 0x0 {
         // error is the original windows api error, use log and debug str

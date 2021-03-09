@@ -13,7 +13,7 @@ pub enum ServiceError {
     //errpr when, called to stop a service that is not active
     NotActive,
     //windows api call failed,
-    WindowsGetLastError(u32),
+    WindowsGetLastError(i32),
     // transmitter (for data passing between thread) has not been set for service
     TransmitterNotSet,
 }
