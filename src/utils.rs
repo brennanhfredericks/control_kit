@@ -13,7 +13,7 @@ pub fn windows_get_last_error(debug: &str) -> Result<(), ServiceError> {
     if error != 0x0 {
         // error is the original windows api error, use log and debug str
         println!("Error calling windows api: {} : {}", debug, error);
-        return Err(ServiceError::WindowsGetLastError);
+        return Err(ServiceError::WindowsGetLastError(error));
     }
 
     Ok(())
