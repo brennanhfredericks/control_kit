@@ -1,9 +1,9 @@
 //use std::rc::Rc;
-use std::ptr;
+use std::{mem, ptr};
+use winapi::shared::dxgiformat;
 use winapi::um::{d3d11, d3dcommon};
 use wio::com::ComPtr;
 
-use crate::windows_get_last_error;
 //create d3d11 device that will be used to process captured images.
 #[path = "capture_errors.rs"]
 mod capture_errors;
@@ -59,5 +59,39 @@ impl D3D11Device {
 struct CompatibleCPUTexture2D;
 
 impl CompatibleCPUTexture2D {
-    fn create(device: &ComPtr<d3d11::ID3D11Device>, src: &ComPtr<d3d11::ID3D11Texture2D>) {}
+    fn create(
+        device: &ComPtr<d3d11::ID3D11Device>,
+        src: &ComPtr<d3d11::ID3D11Texture2D>,
+    ) -> Result<(ComPtr<d3d11::ID3D11Texture2D>, u32, u32), CaptureError> {
+        let mut cputex: *mut d3d11::ID3D11Texture2D = ptr::null_mut();
+        let mut src_desc: d3d11::D3D11_TEXTURE2D_DESC = unsafe { mem::zeroed() };
+
+        //get description of source texture
+        unsafe {
+            src.GetDesc(&mut src_desc);
+        }
+
+        let mut dest_desc: d3d11::D3D11_TEXTURE2D_DESC = unsafe { mem::zeroed() };
+
+        // setup destination texture
+        dest_desc.Width = src_desc.Width;
+        dest_desc.Height = src_desc.Height;
+        dest_desc.MipLevels = src_desc.MipLevels;
+        dest_desc.SampleDesc = src_desc.SampleDesc;
+        dest_desc.ArraySize = src_desc.ArraySize;
+        dest_desc.Format = dxgiformat::DXGI_FORMAT_B8G8R8A8_UNORM;
+        dest_desc.CPUAccessFlags = d3d11::D3D11_CPU_ACCESS_READ;
+        dest_desc.Usage = d3d11::D3D11_USAGE_STAGING;
+
+        // create cpu texture
+        let success = unsafe { device.CreateTexture2D(&dest_desc, ptr::null_mut(), &mut cputex) };
+
+        if success != 0x0 {
+            //add log unable to d3d11 create device
+            return Err(CaptureError::from_win_error(success));
+        }
+
+        let cputex = unsafe { ComPtr::from_raw(cputex) };
+        Ok((cputex, dest_desc.Width.clone(), dest_desc.Height.clone()))
+    }
 }
