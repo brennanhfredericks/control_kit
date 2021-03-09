@@ -1,5 +1,8 @@
 use winapi::shared::winerror;
 use wio::com;
+
+mod d3d11device;
+
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum CaptureError {
     ZeroAccumalatedFrames, // no new frames available
