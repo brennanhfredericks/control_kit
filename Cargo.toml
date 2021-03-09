@@ -8,3 +8,7 @@ edition = "2018"
 
 [dependencies]
 bindings = {path="bindings"}
+
+[target.'cfg(windows)'.dependencies]
+winapi= {version="0.3.9", features = ["d3d11","dxgi1_2","d3dcommon","dxgiformat","winerror"]}
+wio = "0.2.2"

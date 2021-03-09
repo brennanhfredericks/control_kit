@@ -1,4 +1,6 @@
-// specify telemetry format, hard coded to euro truck simulator 2
+// #[cfg(windows)]
+// extern crate winapi;
+// extern crate wio;
 
 mod services;
 pub use services::{Input, InputType, Process, ServiceError, ServiceType, Services};
@@ -12,6 +14,9 @@ pub mod synchronization;
 
 #[path = "inputs/telemetry.rs"]
 pub mod telemetry;
+
+#[path = "inputs/screencapture.rs"]
+pub mod screencapture;
 
 #[cfg(test)]
 mod tests {

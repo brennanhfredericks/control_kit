@@ -51,7 +51,7 @@ fn synchronization_service_groupify_first_last_type_check() {
     // stop all running service
     cap_sess.stop_all_services().unwrap();
 
-    emuprocess.kill();
+    emuprocess.kill().unwrap();
     for i in out_receiver.iter() {
         assert!(i[0].event_type() == EventGame::FrameStartEvent);
         assert!(i.last().unwrap().event_type() == EventGame::FrameEndEvent);
