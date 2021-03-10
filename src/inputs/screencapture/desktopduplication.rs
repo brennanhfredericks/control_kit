@@ -1,5 +1,5 @@
-use crate::{Input, InputProcessMethod, ServiceError};
-
+use crate::telemetry::EventGame;
+use crate::{Input, InputProcessMethod, InputType, ServiceError};
 mod capture_errors;
 use capture_errors::CaptureError;
 
@@ -17,6 +17,35 @@ use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
+
+pub struct Pixels {
+    pixels: Vec<u8>,
+    width: u32,
+    height: u32,
+}
+
+impl Pixels {
+    pub fn new(pixels: Vec<u8>, width: u32, height: u32) -> Pixels {
+        Pixels {
+            pixels,
+            width,
+            height,
+        }
+    }
+}
+
+impl Input for Pixels {
+    fn input_type(&self) -> InputType {
+        InputType::Image
+    }
+    fn event_type(&self) -> EventGame {
+        EventGame::NA
+    }
+
+    fn header(&self) -> (u64, u32, u64, u32) {
+        (0, 0, 0, 0)
+    }
+}
 
 pub struct DesktopDuplication {
     //dxgi_device: ComPtr<dxgi1_2::IDXGIDevice2>,
@@ -249,14 +278,18 @@ impl InputProcessMethod for DesktopDuplication {
                 let stride = mapped_resource.RowPitch as usize / mem::size_of::<u8>();
                 let byte_stride = byte_size(stride);
 
-                let pixel_buf = unsafe {
+                let buf = unsafe {
                     slice::from_raw_parts(
                         mapped_resource.pData as *const u8,
                         byte_stride * height as usize,
                     )
                 };
 
-                let pixel_buf = pixel_buf.to_vec();
+                let buf = buf.to_vec();
+
+                let pixels = Pixels::new(buf, width, height);
+
+                tx.send(Box::new(pixels));
 
                 last_frame = Instant::now();
 

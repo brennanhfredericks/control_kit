@@ -106,6 +106,7 @@ impl Process for Synchronization {
                                         "received NotValidEvent: could be corruption or #[repr(c)]"
                                     )
                                 }
+                                EventGame::NA => {}
                             }
                             //println!(" EventGame: {:?}", input.event_type())
                         }

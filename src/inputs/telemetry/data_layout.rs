@@ -21,6 +21,7 @@ pub enum EventGame {
     FrameStartEvent,
     OtherEvent,    // valid other game events
     NotValidEvent, // not a valid events possible data corruptions
+    NA,            // not appilicable
 }
 
 pub struct DataPair(pub bool, pub Box<dyn Input + Send>);
