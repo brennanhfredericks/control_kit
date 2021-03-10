@@ -16,7 +16,7 @@ use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex};
 use std::thread;
 
-use crate::telemetry::{DataPair, PacketParser, SelectGame, TelemetryInputMethod};
+use crate::telemetry::{DataPair, InputProcessMethod, PacketParser, SelectGame};
 //use to setup windows inter process communication and sychronization objects
 struct InterProcessCommunication {
     hmapping_obj: Option<HANDLE>,
@@ -146,7 +146,7 @@ impl SharedMemory {
     }
 }
 
-impl TelemetryInputMethod for SharedMemory {
+impl InputProcessMethod for SharedMemory {
     //error not triggered
     fn start(&mut self) -> Result<(), ServiceError> {
         if self.transmitter.is_none() {
@@ -261,7 +261,7 @@ impl TelemetryInputMethod for SharedMemory {
         // take ownership of handle and join
         self.handle.take().unwrap().join().unwrap();
     }
-    fn retrieval_method(&self) -> &str {
+    fn method(&self) -> &str {
         "memory-mapped file"
     }
     fn set_transmitter(&mut self, transmitter: Sender<Box<dyn Input + Send>>) {

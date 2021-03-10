@@ -1,6 +1,10 @@
 use crate::{Input, Process, ServiceError};
 use std::sync::mpsc::Sender;
 
+mod inputprocessmethod;
+
+use inputprocessmethod::InputProcessMethod;
+
 #[path = "telemetry/data_layout.rs"]
 mod data_layout;
 
@@ -11,19 +15,8 @@ mod shared_memory;
 
 use shared_memory::SharedMemory;
 
-// wrapper trait for Input, it is expected that Telemetry can be retrieved via
-// memory-mapped file, pipe or socket
-
-pub trait TelemetryInputMethod {
-    fn start(&mut self) -> Result<(), ServiceError>;
-    fn stop(&mut self);
-    fn join(&mut self);
-    fn retrieval_method(&self) -> &str;
-    fn set_transmitter(&mut self, transmitter: Sender<Box<dyn Input + Send>>);
-}
-
 pub struct Telemetry {
-    telemetry_input: Box<dyn TelemetryInputMethod + Send>,
+    telemetry_input: Box<dyn InputProcessMethod + Send>,
 }
 
 impl Telemetry {
@@ -31,6 +24,10 @@ impl Telemetry {
         Telemetry {
             telemetry_input: Box::new(SharedMemory::new(game)),
         }
+    }
+
+    pub fn get_method(&self) -> &str {
+        self.telemetry_input.method()
     }
 
     pub fn set_transmitter(&mut self, transmitter: Sender<Box<dyn Input + Send>>) {
