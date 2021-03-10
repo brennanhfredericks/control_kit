@@ -18,6 +18,10 @@ pub mod telemetry;
 #[path = "inputs/screencapture.rs"]
 pub mod screencapture;
 
+#[path = "inputs/inputprocessmethod.rs"]
+mod inputprocessmethod;
+pub use inputprocessmethod::InputProcessMethod;
+
 #[cfg(test)]
 mod tests {
     #[test]

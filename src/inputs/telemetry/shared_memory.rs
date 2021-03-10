@@ -7,7 +7,7 @@ use bindings::{
     windows::BOOL,
 };
 
-use crate::{str_to_wstring, windows_get_last_error, Input, ServiceError};
+use crate::{str_to_wstring, windows_get_last_error, Input, InputProcessMethod, ServiceError};
 use std::ffi::c_void;
 
 use std::result::Result;
@@ -16,7 +16,7 @@ use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex};
 use std::thread;
 
-use crate::telemetry::{DataPair, InputProcessMethod, PacketParser, SelectGame};
+use crate::telemetry::{DataPair, PacketParser, SelectGame};
 //use to setup windows inter process communication and sychronization objects
 struct InterProcessCommunication {
     hmapping_obj: Option<HANDLE>,

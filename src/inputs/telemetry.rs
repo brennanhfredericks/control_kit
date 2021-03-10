@@ -1,9 +1,5 @@
-use crate::{Input, Process, ServiceError};
+use crate::{Input, InputProcessMethod, Process, ServiceError};
 use std::sync::mpsc::Sender;
-
-mod inputprocessmethod;
-
-use inputprocessmethod::InputProcessMethod;
 
 #[path = "telemetry/data_layout.rs"]
 mod data_layout;
