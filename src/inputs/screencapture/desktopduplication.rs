@@ -2,7 +2,7 @@ mod d3d11device;
 
 use d3d11device::D3D11Device;
 
-use crate::InputProcessMethod;
+use crate::{Input, InputProcessMethod, ServiceError};
 
 mod capture_errors;
 use capture_errors::CaptureError;
@@ -12,11 +12,17 @@ use winapi::um::d3d11;
 use wio::com::ComPtr;
 
 use std::ptr;
+use std::sync::mpsc::Sender;
+use std::sync::{Arc, Mutex};
+use std::thread;
 
 pub struct DesktopDuplication {
     dxgi_device: ComPtr<dxgi1_2::IDXGIDevice2>,
     dxgi_output: ComPtr<dxgi1_2::IDXGIOutput1>,
-    //devicecontext: &ComPtr<d3d11::ID3D11DeviceContext>,
+    devicecontext: Option<ComPtr<d3d11::ID3D11DeviceContext>>, //needed to copy data between textures
+    transmitter: Option<Sender<Box<dyn Input + Send>>>,
+    handle: Option<thread::JoinHandle<()>>,
+    sentinal: Arc<Mutex<bool>>,
 }
 
 impl DesktopDuplication {
@@ -70,8 +76,26 @@ impl DesktopDuplication {
         };
 
         Ok(DesktopDuplication {
-            dxgi_device,
-            dxgi_output,
+            dxgi_device: dxgi_device.clone(),
+            dxgi_output: dxgi_output.clone(),
+            devicecontext: Some(devicecontext.clone()),
+            transmitter: None,
+            handle: None,
+            sentinal: Arc::new(Mutex::new(false)),
         })
     }
+}
+
+unsafe impl std::marker::Send for DesktopDuplication {} // Send trait implemented manual have to test
+
+impl InputProcessMethod for DesktopDuplication {
+    fn start(&mut self) -> Result<(), ServiceError> {
+        Ok(())
+    }
+    fn stop(&mut self) {}
+    fn join(&mut self) {}
+    fn method(&self) -> &str {
+        "DesktopDuplicationAPI"
+    }
+    fn set_transmitter(&mut self, transmitter: Sender<Box<dyn Input + Send>>) {}
 }

@@ -16,6 +16,7 @@ pub enum ServiceError {
     WindowsGetLastError(i32),
     // transmitter (for data passing between thread) has not been set for service
     TransmitterNotSet,
+    FailedToInitialize,
 }
 
 #[derive(Debug, PartialEq, Eq, Hash)]
