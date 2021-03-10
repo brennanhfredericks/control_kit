@@ -56,10 +56,10 @@ impl D3D11Device {
     }
 }
 
-struct CompatibleCPUTexture2D;
+pub struct CompatibleCPUTexture2D;
 
 impl CompatibleCPUTexture2D {
-    fn create(
+    pub fn create(
         device: &ComPtr<d3d11::ID3D11Device>,
         src: &ComPtr<d3d11::ID3D11Texture2D>,
     ) -> Result<(ComPtr<d3d11::ID3D11Texture2D>, u32, u32), CaptureError> {

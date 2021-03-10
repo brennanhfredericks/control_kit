@@ -19,11 +19,10 @@ impl ScreenCapture {
             Err(err) => return Err(ServiceError::WindowsGetLastError(err as i32)),
         };
 
-        let screencapture_input =
-            match DesktopDuplication::new(d_device.get_device(), d_device.get_device_context()) {
-                Ok(dd) => dd,
-                Err(err) => return Err(ServiceError::WindowsGetLastError(err as i32)),
-            };
+        let screencapture_input = match DesktopDuplication::new(d_device.get_device()) {
+            Ok(dd) => dd,
+            Err(err) => return Err(ServiceError::WindowsGetLastError(err as i32)),
+        };
 
         Ok(ScreenCapture {
             screencapture_input: Box::new(screencapture_input),
