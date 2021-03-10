@@ -256,6 +256,8 @@ impl InputProcessMethod for DesktopDuplication {
                     )
                 };
 
+                let pixel_buf = pixel_buf.to_vec();
+
                 last_frame = Instant::now();
 
                 unsafe {
