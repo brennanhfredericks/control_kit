@@ -16,13 +16,13 @@ impl ScreenCapture {
     pub fn via_desktopduplication() -> Result<ScreenCapture, ServiceError> {
         let d_device = match D3D11Device::new() {
             Ok(dev) => dev,
-            Err(_) => return Err(ServiceError::FailedToInitialize),
+            Err(err) => return Err(ServiceError::WindowsGetLastError(err as i32)),
         };
 
         let screencapture_input =
             match DesktopDuplication::new(d_device.get_device(), d_device.get_device_context()) {
                 Ok(dd) => dd,
-                Err(_) => return Err(ServiceError::FailedToInitialize),
+                Err(err) => return Err(ServiceError::WindowsGetLastError(err as i32)),
             };
 
         Ok(ScreenCapture {

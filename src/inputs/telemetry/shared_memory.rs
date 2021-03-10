@@ -157,7 +157,8 @@ impl InputProcessMethod for SharedMemory {
         let sentinal = Arc::clone(&self.sentinal);
         let p_paser = self.p_paser.clone();
         //let sel_game = self.selected_game.clone();
-        let tx = self.transmitter.as_ref().unwrap().clone();
+
+        let tx = self.transmitter.take().unwrap();
 
         let handle = thread::spawn(move || {
             let mut ipc = InterProcessCommunication::new();
