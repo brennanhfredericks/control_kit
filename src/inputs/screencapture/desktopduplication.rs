@@ -285,11 +285,14 @@ impl InputProcessMethod for DesktopDuplication {
                     )
                 };
 
-                let buf = buf.to_vec();
+                let pixels = Pixels::new(buf.to_vec(), width, height);
 
-                let pixels = Pixels::new(buf, width, height);
-
-                tx.send(Box::new(pixels));
+                match tx.send(Box::new(pixels)) {
+                    Err(err) => {
+                        println!("desktopduplication loop transmit error {}", err);
+                    }
+                    _ => (),
+                }
 
                 last_frame = Instant::now();
 
@@ -312,10 +315,18 @@ impl InputProcessMethod for DesktopDuplication {
         self.handle = Some(handle);
         Ok(())
     }
-    fn stop(&mut self) {}
-    fn join(&mut self) {}
+    fn stop(&mut self) {
+        //stop loop
+        *self.sentinal.lock().unwrap() = false;
+    }
+    fn join(&mut self) {
+        // take ownership of handle and join
+        self.handle.take().unwrap().join().unwrap().unwrap();
+    }
     fn method(&self) -> &str {
         "DesktopDuplicationAPI"
     }
-    fn set_transmitter(&mut self, transmitter: Sender<Box<dyn Input + Send>>) {}
+    fn set_transmitter(&mut self, transmitter: Sender<Box<dyn Input + Send>>) {
+        self.transmitter = Some(transmitter);
+    }
 }
