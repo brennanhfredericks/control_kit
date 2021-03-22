@@ -20,11 +20,11 @@ pub enum ServiceError {
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub enum ServiceType {
-    UserInput,      // could be keyboard or controller
-    TelemetryInput, // could be different games, for now only ets2_telemetry
-    ImageInput,     // screenshot
-    SynchronizeInputs, // use to synchronize and groupify the inputs
-                    // use display the user and telemetry outputs and image
+    UserInput,          // could be keyboard or controller
+    TelemetryInput,     // could be different games, for now only ets2_telemetry
+    ScreenCaptureInput, // screenshot
+    SynchronizeInputs,  // use to synchronize and groupify the inputs
+                        // use display the user and telemetry outputs and image
 }
 pub trait Process {
     fn start(&mut self) -> Result<(), ServiceError>;
@@ -72,6 +72,7 @@ impl Services {
         service_type: ServiceType,
         mut process: Box<dyn Process>,
     ) -> Result<(), ServiceError> {
+        println!("Starting serivce {:?}", service_type);
         process.start()?;
         self.services.insert(service_type, process);
 
@@ -95,6 +96,7 @@ impl Services {
     //stop all services
     pub fn stop_all_services(&mut self) -> Result<(), ServiceError> {
         for (k, v) in self.services.iter_mut() {
+            println!("trying to stop service {:?}", k);
             v.stop()?;
             v.join();
             println!("service stopped {:?}", k);

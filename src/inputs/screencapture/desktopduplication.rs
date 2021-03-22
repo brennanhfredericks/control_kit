@@ -6,8 +6,8 @@ use capture_errors::CaptureError;
 mod d3d11device;
 use d3d11device::CompatibleCPUTexture2D;
 
-use winapi::shared::{dxgi1_2, winerror};
-use winapi::um::{d3d11, unknwnbase};
+use winapi::shared::{dxgi1_2, windef, winerror};
+use winapi::um::{d3d11, unknwnbase, winuser};
 use wio::com::ComPtr;
 
 use std::mem;
@@ -52,13 +52,17 @@ pub struct DesktopDuplication {
     //dxgi_output: ComPtr<dxgi1_2::IDXGIOutput1>,
     dxgi_output_duplication: Option<ComPtr<dxgi1_2::IDXGIOutputDuplication>>,
     device: Option<ComPtr<d3d11::ID3D11Device>>, //needed to copy data between textures
+    devicecontext: Option<ComPtr<d3d11::ID3D11DeviceContext>>,
     transmitter: Option<Sender<Box<dyn Input + Send>>>,
     handle: Option<thread::JoinHandle<Result<(), ServiceError>>>,
     sentinal: Arc<Mutex<bool>>,
 }
 
 impl DesktopDuplication {
-    pub fn new(device: &ComPtr<d3d11::ID3D11Device>) -> Result<DesktopDuplication, CaptureError> {
+    pub fn new(
+        device: &ComPtr<d3d11::ID3D11Device>,
+        devicecontext: &ComPtr<d3d11::ID3D11DeviceContext>,
+    ) -> Result<DesktopDuplication, CaptureError> {
         // get DXGI Device from ID3D11Device
         let dxgi_device: ComPtr<dxgi1_2::IDXGIDevice2> = match device.cast() {
             Ok(dev) => dev,
@@ -125,6 +129,7 @@ impl DesktopDuplication {
             //dxgi_output,
             dxgi_output_duplication: Some(dxgi_output_duplication),
             device: Some(device.clone()),
+            devicecontext: Some(devicecontext.clone()),
             transmitter: None,
             handle: None,
             sentinal: Arc::new(Mutex::new(false)),
@@ -147,22 +152,25 @@ impl InputProcessMethod for DesktopDuplication {
 
         // take value
         let device = self.device.take().unwrap().as_raw() as usize;
+        let devicecontext = self.devicecontext.take().unwrap().as_raw() as usize;
         let tx = self.transmitter.take().unwrap();
         let output_duplication = self.dxgi_output_duplication.take().unwrap().as_raw() as usize;
 
         let handle = thread::spawn(move || {
-            // needed to pass pointers between threads
+            // needed to pass pointers between
+            println!("from thread desktopduplication");
             let mut output_duplication: ComPtr<dxgi1_2::IDXGIOutputDuplication> =
                 unsafe { ComPtr::from_raw(output_duplication as *mut _) };
 
+            println!("from thread desktopduplication1");
             let device: ComPtr<d3d11::ID3D11Device> = unsafe { ComPtr::from_raw(device as *mut _) };
 
-            let mut device_context = ptr::null_mut();
+            println!("from thread desktopduplication4");
+            let devicecontext: ComPtr<d3d11::ID3D11DeviceContext> =
+                unsafe { ComPtr::from_raw(devicecontext as *mut _) };
 
-            unsafe { device.GetImmediateContext(&mut device_context) };
-
-            let device_context = unsafe { ComPtr::from_raw(device_context) };
-
+            println!("from thread desktopduplication5");
+            println!("thread desktopduplication device and device context");
             {
                 *sentinal.lock().unwrap() = true;
             }
@@ -178,9 +186,11 @@ impl InputProcessMethod for DesktopDuplication {
             let mut last_frame = Instant::now();
             let mut first_iter = true;
 
+            println!("entering thread loop desktopduplication");
+
             loop {
                 //need to be able to recreate output duplication if failed, investigate how
-
+                println!("desktopduplication loop starting");
                 let timestamp = Instant::now();
                 //check sentinal condition
                 if !*sentinal.lock().unwrap() {
@@ -205,6 +215,7 @@ impl InputProcessMethod for DesktopDuplication {
                     // call will return InvalidCall if frame already release (which is the the case at start)
                     if success != winerror::DXGI_ERROR_INVALID_CALL {
                         // need to be able to restart output duplication api
+                        println!("ReleaseFrame Error {:x}", success);
                         return Err(ServiceError::WindowsGetLastError(success));
                     }
                 }
@@ -220,12 +231,15 @@ impl InputProcessMethod for DesktopDuplication {
 
                 if success != 0x0 {
                     // need to be able to restart output duplication api
+                    println!("AquireFrame Error {:x}", success);
                     return Err(ServiceError::WindowsGetLastError(success));
                 }
 
                 if dxgi_outdupl_frame_info.AccumulatedFrames < 1 {
                     //no frame available wait before retrying
+                    println!("No accumalated frames");
                     thread::sleep(Duration::from_millis(2));
+
                     continue;
                 }
 
@@ -234,6 +248,7 @@ impl InputProcessMethod for DesktopDuplication {
                 let gpu_texture: ComPtr<d3d11::ID3D11Texture2D> = match dxgi_resource.cast() {
                     Ok(texture) => texture,
                     Err(err) => {
+                        println!("ID3D11Texture2D Error {:x}", err);
                         return Err(ServiceError::WindowsGetLastError(err));
                     }
                 };
@@ -253,14 +268,14 @@ impl InputProcessMethod for DesktopDuplication {
 
                 // copy texture from GPU texture to CPU texture
                 unsafe {
-                    device_context.CopyResource(
+                    devicecontext.CopyResource(
                         gpu_texture.as_raw() as *mut d3d11::ID3D11Resource,
                         cpu_texture.as_raw() as *mut d3d11::ID3D11Resource,
                     )
                 }
 
                 let success = unsafe {
-                    device_context.Map(
+                    devicecontext.Map(
                         cpu_texture.as_raw() as *mut d3d11::ID3D11Resource,
                         subresource,
                         d3d11::D3D11_MAP_READ,
@@ -270,6 +285,7 @@ impl InputProcessMethod for DesktopDuplication {
                 };
 
                 if success != 0x0 {
+                    println!("Map Error {:x}", success);
                     return Err(ServiceError::WindowsGetLastError(success));
                 }
 
@@ -297,31 +313,46 @@ impl InputProcessMethod for DesktopDuplication {
                 last_frame = Instant::now();
 
                 unsafe {
-                    device_context.Unmap(
+                    devicecontext.Unmap(
                         cpu_texture.as_raw() as *mut d3d11::ID3D11Resource,
                         subresource,
                     )
                 };
+
+                println!("got new frame");
             }
+
+            // if let Err(err) = res {
+            //     println!("error in desktop application loop {:?}", err)
+            // }
 
             let success = unsafe { output_duplication.Release() };
 
             if success != 0x0 {
+                println!("OuputDuplication Release Error {:x}", success);
                 return Err(ServiceError::WindowsGetLastError(success as i32));
             }
 
             Ok(())
         });
+
         self.handle = Some(handle);
+        println!("handle desktopduplication");
         Ok(())
     }
     fn stop(&mut self) {
         //stop loop
         *self.sentinal.lock().unwrap() = false;
+        println!("set conditional to false");
     }
     fn join(&mut self) {
         // take ownership of handle and join
-        self.handle.take().unwrap().join().unwrap().unwrap();
+        match self.handle.take().unwrap().join().unwrap() {
+            Err(err) => {
+                println!("Handle returned ServiceError {:?}", err);
+            }
+            Ok(_) => (),
+        }
     }
     fn method(&self) -> &str {
         "DesktopDuplicationAPI"

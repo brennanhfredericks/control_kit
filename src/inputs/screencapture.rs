@@ -1,4 +1,5 @@
-use crate::{InputProcessMethod, ServiceError};
+use crate::{Input, InputProcessMethod, Process, ServiceError};
+use std::sync::mpsc::Sender;
 
 #[path = "screencapture/desktopduplication.rs"]
 mod desktopduplication;
@@ -19,13 +20,39 @@ impl ScreenCapture {
             Err(err) => return Err(ServiceError::WindowsGetLastError(err as i32)),
         };
 
-        let screencapture_input = match DesktopDuplication::new(d_device.get_device()) {
-            Ok(dd) => dd,
-            Err(err) => return Err(ServiceError::WindowsGetLastError(err as i32)),
-        };
+        let screencapture_input =
+            match DesktopDuplication::new(d_device.get_device(), d_device.get_device_context()) {
+                Ok(dd) => dd,
+                Err(err) => return Err(ServiceError::WindowsGetLastError(err as i32)),
+            };
 
         Ok(ScreenCapture {
             screencapture_input: Box::new(screencapture_input),
         })
+    }
+
+    pub fn get_method(&self) -> &str {
+        self.screencapture_input.method()
+    }
+
+    pub fn set_transmitter(&mut self, transmitter: Sender<Box<dyn Input + Send>>) {
+        self.screencapture_input.set_transmitter(transmitter);
+    }
+}
+
+impl Process for ScreenCapture {
+    fn start(&mut self) -> Result<(), ServiceError> {
+        self.screencapture_input.start()?;
+        Ok(())
+    }
+
+    fn stop(&mut self) -> Result<(), ServiceError> {
+        self.screencapture_input.stop();
+
+        Ok(())
+    }
+
+    fn join(&mut self) {
+        self.screencapture_input.join();
     }
 }
