@@ -1,8 +1,8 @@
 use control::screencapture::ScreenCapture;
 use control::synchronization::Synchronization;
 use control::telemetry::{SelectGame, Telemetry};
-use control::{Process, ServiceType, Services};
-use dxgcap::DXGIManager;
+use control::{Input, Process, ServiceType, Services};
+
 use image;
 use std::fs::File;
 use std::io;
@@ -17,32 +17,6 @@ type CResult<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 fn main() -> CResult<()> {
     println!("main run");
-    // let mut dupmanager = DXGIManager::new(2000).unwrap();
-
-    // dupmanager.set_capture_source_index(0);
-    // println!("get source {}", dupmanager.get_capture_source_index());
-
-    // let (buf, (width, height)) = dupmanager.capture_frame_components().unwrap();
-
-    // println!("width: {}, height: {}", width, height);
-
-    // let mut fout = io::BufWriter::new(Vec::<u8>::new());
-    // let mut jpeg_encoder = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut fout, 100);
-    // jpeg_encoder.set_pixel_density(image::jpeg::PixelDensity::dpi(96));
-
-    // jpeg_encoder
-    //     .encode(
-    //         buf.as_slice(),
-    //         width as u32,
-    //         height as u32,
-    //         image::ColorType::Bgra8,
-    //     )
-    //     .unwrap();
-
-    // let jbuf = fout.into_inner().unwrap();
-    // let mut jfile = File::create("test.jpg")?;
-    // jfile.write_all(&jbuf)?;
-    //println!("{:?}", buf[100]);
 
     let (out_transmitter, out_receiver) = channel();
 
@@ -50,14 +24,14 @@ fn main() -> CResult<()> {
     let sel_game = SelectGame::ETS2;
     // setup telemetry
 
-    //let mut sync = Synchronization::new();
+    let mut sync = Synchronization::new();
 
     //get transmitter for synchronization services
     //let tx_telemetry = sync.get_input_transmitter();
-    //let tx_screencapture = sync.get_input_transmitter();
+    let tx_screencapture = sync.get_input_transmitter();
 
     //set transmitter for syncing broadcast service
-    //sync.set_output_transmitter(out_transmitter);
+    sync.set_output_transmitter(out_transmitter);
 
     //create telemetry serivce
     //let mut ets2_telemetry = Telemetry::via_shared_memory(sel_game);
@@ -65,26 +39,21 @@ fn main() -> CResult<()> {
 
     //crate screencapture service
     let mut dd_screencapture = ScreenCapture::via_desktopduplication().unwrap();
-    dd_screencapture.set_transmitter(out_transmitter);
+    dd_screencapture.set_transmitter(tx_screencapture);
 
-    println!("{}", dd_screencapture.get_method());
+    //println!("{}", dd_screencapture.get_method());
 
-    dd_screencapture.start();
-    thread::sleep(Duration::from_secs(10));
-    dd_screencapture.stop();
+    let mut cap_sess = Services::new();
 
-    dd_screencapture.join();
+    //start sync services
+    cap_sess
+        .add_service(ServiceType::SynchronizeInputs, Box::new(sync))
+        .unwrap();
 
-    //let mut cap_sess = Services::new();
-
-    // start sync services
-    // cap_sess
-    //     .add_service(ServiceType::SynchronizeInputs, Box::new(sync))
-    //     .unwrap();
-
-    // cap_sess
-    //     .add_service(ServiceType::ScreenCaptureInput, Box::new(dd_screencapture))
-    //     .unwrap();
+    // start screen capture services
+    cap_sess
+        .add_service(ServiceType::ScreenCaptureInput, Box::new(dd_screencapture))
+        .unwrap();
 
     // start telemetry emulation thread
     // let mut emulation_thread = Command::new(".\\tests.\\TelemetryEmulation.exe")
@@ -103,17 +72,23 @@ fn main() -> CResult<()> {
     // wait till telemetry is done
     //cap_sess.block_until_telemetry_finished().unwrap();
 
-    //thread::sleep(Duration::from_secs(5));
-    //println!("done sleep for t");
+    thread::sleep(Duration::from_secs(5));
+    println!("done sleeping");
 
     // stop all running service
-    //cap_sess.stop_all_services().unwrap();
+    cap_sess.stop_all_services().unwrap();
 
     //join emulation thread
     //emulation_thread.wait().unwrap();
 
-    for i in out_receiver.iter() {
-        println!("input_type: {:?} header: {:?}", i.input_type(), i.header());
+    for grouped_input in out_receiver.iter() {
+        //
+
+        println!(
+            "input_type: {:?} header: {:?}",
+            grouped_input[0].input_type(),
+            grouped_input[0].header()
+        );
         //assert!(i[0].header().0 + 1 == i.last().unwrap().header().0);
         // println!("f - id: {}", i[0].header().0);
         // println!("l - id: {}", i.last().unwrap().header().0);

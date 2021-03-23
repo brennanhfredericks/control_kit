@@ -48,8 +48,6 @@ impl Input for Pixels {
 }
 
 pub struct DesktopDuplication {
-    //dxgi_device: ComPtr<dxgi1_2::IDXGIDevice2>,
-    //dxgi_output: ComPtr<dxgi1_2::IDXGIOutput1>,
     transmitter: Option<Sender<Box<dyn Input + Send>>>,
     handle: Option<thread::JoinHandle<u32>>,
     sentinal: Arc<Mutex<bool>>,
@@ -60,8 +58,6 @@ impl DesktopDuplication {
         // get DXGI Device from ID3D11Device
 
         Ok(DesktopDuplication {
-            //dxgi_device,
-            //dxgi_output,
             transmitter: None,
             handle: None,
             sentinal: Arc::new(Mutex::new(false)),
@@ -270,14 +266,7 @@ impl InputProcessMethod for DesktopDuplication {
     fn join(&mut self) {
         // take ownership of handle and
 
-        let res = self.handle.take().unwrap().join().unwrap();
-        println!("join result: {}", res);
-        // let res_outer = match res.unwrap() {
-        //     Ok(inner) => inner,
-        //     Err(e) => {
-        //         println!("{:?}", e);
-        //     }
-        //};
+        self.handle.take().unwrap().join().unwrap();
     }
     fn method(&self) -> &str {
         "DesktopDuplicationAPI"
