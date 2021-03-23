@@ -4,7 +4,7 @@ mod capture_errors;
 use capture_errors::CaptureError;
 
 mod d3d11device;
-use d3d11device::CompatibleCPUTexture2D;
+use d3d11device::{CompatibleCPUTexture2D, D3D11Device};
 
 use winapi::shared::{dxgi1_2, windef, winerror};
 use winapi::um::{d3d11, unknwnbase, winuser};
@@ -50,86 +50,18 @@ impl Input for Pixels {
 pub struct DesktopDuplication {
     //dxgi_device: ComPtr<dxgi1_2::IDXGIDevice2>,
     //dxgi_output: ComPtr<dxgi1_2::IDXGIOutput1>,
-    dxgi_output_duplication: Option<Arc<ComPtr<dxgi1_2::IDXGIOutputDuplication>>>,
-    device: Option<Arc<ComPtr<d3d11::ID3D11Device>>>, //needed to copy data between textures
-    devicecontext: Option<Arc<ComPtr<d3d11::ID3D11DeviceContext>>>,
     transmitter: Option<Sender<Box<dyn Input + Send>>>,
     handle: Option<thread::JoinHandle<()>>,
     sentinal: Arc<Mutex<bool>>,
 }
 
 impl DesktopDuplication {
-    pub fn new(
-        device: Arc<ComPtr<d3d11::ID3D11Device>>,
-        devicecontext: Arc<ComPtr<d3d11::ID3D11DeviceContext>>,
-    ) -> Result<DesktopDuplication, CaptureError> {
+    pub fn new() -> Result<DesktopDuplication, CaptureError> {
         // get DXGI Device from ID3D11Device
-        let dxgi_device: ComPtr<dxgi1_2::IDXGIDevice2> = match device.cast() {
-            Ok(dev) => dev,
-            Err(err) => {
-                // add logging
-                return Err(CaptureError::from_win_error(err));
-            }
-        };
-
-        //get DXGI Adapter from  DXGI Device, use to retrieve all outputs
-        let mut dxgi_adapter = ptr::null_mut();
-
-        let success = unsafe { dxgi_device.GetAdapter(&mut dxgi_adapter) };
-        println!("GetAdapter: {:x}", success);
-        //check if operation complete succefully
-        if success != 0x0 {
-            // add logging
-            return Err(CaptureError::from_win_error(success));
-        }
-
-        // create ComPtr from raw pointer
-        let dxgi_adapter = unsafe { ComPtr::from_raw(dxgi_adapter) };
-
-        // use to primary monitor. multiple monitor require vector
-        let mut dxgi_output = ptr::null_mut();
-
-        //use DXGI Adapter to retrieve primary monitor (is at index zero)
-        let success = unsafe { dxgi_adapter.EnumOutputs(0, &mut dxgi_output) };
-        println!("EnumOutputs: {:x}", success);
-        if success != 0x0 {
-            //add logging
-            return Err(CaptureError::from_win_error(success));
-        }
-
-        let dxgi_output = unsafe { ComPtr::from_raw(dxgi_output) };
-
-        // cast DXGI Output to  DXGI Output1 to access duplication functionality
-        let dxgi_output: ComPtr<dxgi1_2::IDXGIOutput1> = match dxgi_output.cast() {
-            Ok(out) => out,
-            Err(err) => {
-                //add logging
-                return Err(CaptureError::from_win_error(err));
-            }
-        };
-
-        let mut dxgi_out_dup = ptr::null_mut();
-
-        let success = unsafe {
-            dxgi_output.DuplicateOutput(
-                dxgi_device.as_raw() as *mut unknwnbase::IUnknown,
-                &mut dxgi_out_dup,
-            )
-        };
-        println!("DuplicateOutput: {:x}", success);
-        if success != 0x0 {
-            //add error log
-            return Err(CaptureError::from_win_error(success));
-        }
-
-        let dxgi_output_duplication = unsafe { ComPtr::from_raw(dxgi_out_dup) };
 
         Ok(DesktopDuplication {
             //dxgi_device,
             //dxgi_output,
-            dxgi_output_duplication: Some(Arc::new(dxgi_output_duplication)),
-            device: Some(device),
-            devicecontext: Some(devicecontext),
             transmitter: None,
             handle: None,
             sentinal: Arc::new(Mutex::new(false)),
@@ -151,26 +83,13 @@ impl InputProcessMethod for DesktopDuplication {
         let sentinal = Arc::clone(&self.sentinal);
 
         // take value
-        let device = self.device.take().unwrap(); //.unwrap().as_raw() as usize;
-        let devicecontext = self.devicecontext.take().unwrap(); //.as_raw() as usize;
         let tx = self.transmitter.take().unwrap();
-        let output_duplication = self.dxgi_output_duplication.take().unwrap(); //.as_raw() as usize;
 
         let handle = thread::spawn(move || {
             // needed to pass pointers between
-
-            // let output_duplication: ComPtr<dxgi1_2::IDXGIOutputDuplication> =
-            //     unsafe { ComPtr::from_raw(output_duplication as *mut _) };
-
-            // unsafe {
-            //     output_duplication.Release();
-            // }
-
-            //let device: ComPtr<d3d11::ID3D11Device> = unsafe { ComPtr::from_raw(device as *mut _) };
-
-            // let devicecontext: ComPtr<d3d11::ID3D11DeviceContext> =
-            //     unsafe { ComPtr::from_raw(devicecontext as *mut _) };
-
+            // handle error case
+            let d3d11device = D3D11Device::new().unwrap();
+            let (outdup, dev, devctx) = d3d11device.init_duplication().unwrap();
             {
                 *sentinal.lock().unwrap() = true;
             }
@@ -181,22 +100,13 @@ impl InputProcessMethod for DesktopDuplication {
             let mut mapped_resource: d3d11::D3D11_MAPPED_SUBRESOURCE = unsafe { mem::zeroed() };
             let subresource = d3d11::D3D11CalcSubresource(0, 0, 0);
 
-            // //let mut dxgi_resource = ptr::null_mut();
+            let mut dxgi_resource = ptr::null_mut();
 
-            // let mut last_frame = Instant::now();
-            // let mut first_iter = true;
+            let mut last_frame = Instant::now();
+            let mut first_iter = true;
 
-            loop {
-                if !*sentinal.lock().unwrap() {
-                    println!("stopping desktopduplication loop");
-                    break;
-                }
-                thread::sleep(Duration::from_millis(50));
-            }
-            /*
             loop {
                 //need to be able to recreate output duplication if failed, investigate how
-                println!("desktopduplication loop starting");
                 let timestamp = Instant::now();
                 //check sentinal condition
                 if !*sentinal.lock().unwrap() {
@@ -209,37 +119,33 @@ impl InputProcessMethod for DesktopDuplication {
                     continue;
                 }
 
-                println!("desktopduplication loop starting1");
                 // use to capture at time zero or close to it
                 if first_iter {
                     first_iter = false;
                 } else {
                     //release frame before aquiring next
-                    /*
-                    let success = unsafe { output_duplication.ReleaseFrame() };
-
+                    println!("desktopduplication loop releaseframe before: ");
+                    let success = unsafe { outdup.ReleaseFrame() };
+                    println!("desktopduplication loop releaseframe after: {:x}", success);
                     if success != 0x0 {
                         // call will return InvalidCall if frame already release (which is the the case at start)
                         if success != winerror::DXGI_ERROR_INVALID_CALL {
                             // need to be able to restart output duplication api
                             println!("ReleaseFrame Error {:x}", success);
-                            return Err(ServiceError::WindowsGetLastError(success));
+                            break;
+                            // return Err(ServiceError::WindowsGetLastError(success));
                         }
                     }
-                    */
                 }
 
                 //println!("desktopduplication loop starting2");
 
+                // aquire new frame
+                let success = unsafe {
+                    outdup.AcquireNextFrame(1, &mut dxgi_outdupl_frame_info, &mut dxgi_resource)
+                };
+                println!("desktopduplication loop aquirenextframe:");
                 /*
-                    // aquire new frame
-                    let success = unsafe {
-                        output_duplication.AcquireNextFrame(
-                            1,
-                            &mut dxgi_outdupl_frame_info,
-                            &mut dxgi_resource,
-                        )
-                    };
                     println!("desktopduplication loop starting3");
                     if success != 0x0 {
                         // need to be able to restart output duplication api
@@ -348,7 +254,6 @@ impl InputProcessMethod for DesktopDuplication {
                 Ok(())
                 */
             }
-            */
         });
 
         self.handle = Some(handle);

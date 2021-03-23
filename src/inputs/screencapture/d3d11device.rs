@@ -1,8 +1,8 @@
 //use std::rc::Rc;
 use std::sync::Arc;
 use std::{mem, ptr};
-use winapi::shared::dxgiformat;
-use winapi::um::{d3d11, d3dcommon};
+use winapi::shared::{dxgi1_2, dxgiformat};
+use winapi::um::{d3d11, d3dcommon, unknwnbase};
 use wio::com::ComPtr;
 
 //create d3d11 device that will be used to process captured images.
@@ -54,6 +54,83 @@ impl D3D11Device {
 
     pub fn get_device_context(&self) -> Arc<ComPtr<d3d11::ID3D11DeviceContext>> {
         Arc::clone(&self.devicecontext)
+    }
+
+    pub fn init_duplication(
+        &self,
+    ) -> Result<
+        (
+            Arc<ComPtr<dxgi1_2::IDXGIOutputDuplication>>,
+            Arc<ComPtr<d3d11::ID3D11Device>>,
+            Arc<ComPtr<d3d11::ID3D11DeviceContext>>,
+        ),
+        CaptureError,
+    > {
+        let dxgi_device: ComPtr<dxgi1_2::IDXGIDevice2> = match self.device.as_ref().cast() {
+            Ok(dev) => dev,
+            Err(err) => {
+                // add logging
+                return Err(CaptureError::from_win_error(err));
+            }
+        };
+
+        //get DXGI Adapter from  DXGI Device, use to retrieve all outputs
+        let mut dxgi_adapter = ptr::null_mut();
+
+        let success = unsafe { dxgi_device.GetAdapter(&mut dxgi_adapter) };
+        println!("GetAdapter: {:x}", success);
+        //check if operation complete succefully
+        if success != 0x0 {
+            // add logging
+            return Err(CaptureError::from_win_error(success));
+        }
+
+        // create ComPtr from raw pointer
+        let dxgi_adapter = unsafe { ComPtr::from_raw(dxgi_adapter) };
+
+        // use to primary monitor. multiple monitor require vector
+        let mut dxgi_output = ptr::null_mut();
+
+        //use DXGI Adapter to retrieve primary monitor (is at index zero)
+        let success = unsafe { dxgi_adapter.EnumOutputs(0, &mut dxgi_output) };
+        println!("EnumOutputs: {:x}", success);
+        if success != 0x0 {
+            //add logging
+            return Err(CaptureError::from_win_error(success));
+        }
+
+        let dxgi_output = unsafe { ComPtr::from_raw(dxgi_output) };
+
+        // cast DXGI Output to  DXGI Output1 to access duplication functionality
+        let dxgi_output: ComPtr<dxgi1_2::IDXGIOutput1> = match dxgi_output.cast() {
+            Ok(out) => out,
+            Err(err) => {
+                //add logging
+                return Err(CaptureError::from_win_error(err));
+            }
+        };
+
+        let mut dxgi_out_dup = ptr::null_mut();
+
+        let success = unsafe {
+            dxgi_output.DuplicateOutput(
+                dxgi_device.as_raw() as *mut unknwnbase::IUnknown,
+                &mut dxgi_out_dup,
+            )
+        };
+        println!("DuplicateOutput: {:x}", success);
+        if success != 0x0 {
+            //add error log
+            return Err(CaptureError::from_win_error(success));
+        }
+
+        let dxgi_output_duplication = Arc::new(unsafe { ComPtr::from_raw(dxgi_out_dup) });
+
+        Ok((
+            Arc::clone(&dxgi_output_duplication),
+            Arc::clone(&self.device),
+            Arc::clone(&self.devicecontext),
+        ))
     }
 }
 
