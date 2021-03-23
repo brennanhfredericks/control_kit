@@ -78,7 +78,7 @@ impl D3D11Device {
         let mut dxgi_adapter = ptr::null_mut();
 
         let success = unsafe { dxgi_device.GetAdapter(&mut dxgi_adapter) };
-        println!("GetAdapter: {:x}", success);
+
         //check if operation complete succefully
         if success != 0x0 {
             // add logging
@@ -93,7 +93,7 @@ impl D3D11Device {
 
         //use DXGI Adapter to retrieve primary monitor (is at index zero)
         let success = unsafe { dxgi_adapter.EnumOutputs(0, &mut dxgi_output) };
-        println!("EnumOutputs: {:x}", success);
+
         if success != 0x0 {
             //add logging
             return Err(CaptureError::from_win_error(success));
@@ -118,7 +118,7 @@ impl D3D11Device {
                 &mut dxgi_out_dup,
             )
         };
-        println!("DuplicateOutput: {:x}", success);
+
         if success != 0x0 {
             //add error log
             return Err(CaptureError::from_win_error(success));

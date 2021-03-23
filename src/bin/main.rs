@@ -70,7 +70,7 @@ fn main() -> CResult<()> {
     println!("{}", dd_screencapture.get_method());
 
     dd_screencapture.start();
-    thread::sleep(Duration::from_secs(1));
+    thread::sleep(Duration::from_secs(10));
     dd_screencapture.stop();
 
     dd_screencapture.join();
@@ -112,11 +112,12 @@ fn main() -> CResult<()> {
     //join emulation thread
     //emulation_thread.wait().unwrap();
 
-    // for i in out_receiver.iter() {
-    //     assert!(i[0].header().0 + 1 == i.last().unwrap().header().0);
-    //     // println!("f - id: {}", i[0].header().0);
-    //     // println!("l - id: {}", i.last().unwrap().header().0);
-    // }
+    for i in out_receiver.iter() {
+        println!("input_type: {:?} header: {:?}", i.input_type(), i.header());
+        //assert!(i[0].header().0 + 1 == i.last().unwrap().header().0);
+        // println!("f - id: {}", i[0].header().0);
+        // println!("l - id: {}", i.last().unwrap().header().0);
+    }
 
     Ok(())
 }

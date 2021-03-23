@@ -43,7 +43,7 @@ impl Input for Pixels {
     }
 
     fn header(&self) -> (u64, u32, u64, u32) {
-        (0, 0, 0, 0)
+        (0, self.width, 0, self.height)
     }
 }
 
@@ -51,7 +51,7 @@ pub struct DesktopDuplication {
     //dxgi_device: ComPtr<dxgi1_2::IDXGIDevice2>,
     //dxgi_output: ComPtr<dxgi1_2::IDXGIOutput1>,
     transmitter: Option<Sender<Box<dyn Input + Send>>>,
-    handle: Option<thread::JoinHandle<()>>,
+    handle: Option<thread::JoinHandle<u32>>,
     sentinal: Arc<Mutex<bool>>,
 }
 
@@ -124,9 +124,9 @@ impl InputProcessMethod for DesktopDuplication {
                     first_iter = false;
                 } else {
                     //release frame before aquiring next
-                    println!("desktopduplication loop releaseframe before: ");
+
                     let success = unsafe { outdup.ReleaseFrame() };
-                    println!("desktopduplication loop releaseframe after: {:x}", success);
+
                     if success != 0x0 {
                         // call will return InvalidCall if frame already release (which is the the case at start)
                         if success != winerror::DXGI_ERROR_INVALID_CALL {
@@ -144,134 +144,134 @@ impl InputProcessMethod for DesktopDuplication {
                 let success = unsafe {
                     outdup.AcquireNextFrame(1, &mut dxgi_outdupl_frame_info, &mut dxgi_resource)
                 };
-                println!("desktopduplication loop aquirenextframe:");
-                /*
-                    println!("desktopduplication loop starting3");
-                    if success != 0x0 {
-                        // need to be able to restart output duplication api
-                        println!("AquireFrame Error {:x}", success);
-                        return Err(ServiceError::WindowsGetLastError(success));
-                    }
-
-                    if dxgi_outdupl_frame_info.AccumulatedFrames < 1 {
-                        //no frame available wait before retrying
-                        println!("No accumalated frames");
-                        thread::sleep(Duration::from_millis(2));
-
-                        continue;
-                    }
-
-                    let dxgi_resource = unsafe { ComPtr::from_raw(dxgi_resource) };
-
-                    let gpu_texture: ComPtr<d3d11::ID3D11Texture2D> = match dxgi_resource.cast() {
-                        Ok(texture) => texture,
-                        Err(err) => {
-                            println!("ID3D11Texture2D Error {:x}", err);
-                            return Err(ServiceError::WindowsGetLastError(err));
-                        }
-                    };
-
-                    // get cpu compatible texture
-                    if compatible_texture.is_none() {
-                        compatible_texture = match CompatibleCPUTexture2D::create(&device, &gpu_texture)
-                        {
-                            Ok(par) => Some(par),
-                            Err(f) => {
-                                return Err(ServiceError::WindowsGetLastError(f as i32));
-                            }
-                        };
-                    }
-
-                    let (cpu_texture, width, height) = compatible_texture.as_ref().unwrap().clone();
-
-                    // copy texture from GPU texture to CPU texture
-                    unsafe {
-                        devicecontext.CopyResource(
-                            gpu_texture.as_raw() as *mut d3d11::ID3D11Resource,
-                            cpu_texture.as_raw() as *mut d3d11::ID3D11Resource,
-                        )
-                    }
-
-                    let success = unsafe {
-                        devicecontext.Map(
-                            cpu_texture.as_raw() as *mut d3d11::ID3D11Resource,
-                            subresource,
-                            d3d11::D3D11_MAP_READ,
-                            0,
-                            &mut mapped_resource,
-                        )
-                    };
-
-                    if success != 0x0 {
-                        println!("Map Error {:x}", success);
-                        return Err(ServiceError::WindowsGetLastError(success));
-                    }
-
-                    let byte_size = |x| x * mem::size_of::<u8>() / mem::size_of::<u8>();
-
-                    let stride = mapped_resource.RowPitch as usize / mem::size_of::<u8>();
-                    let byte_stride = byte_size(stride);
-
-                    let buf = unsafe {
-                        slice::from_raw_parts(
-                            mapped_resource.pData as *const u8,
-                            byte_stride * height as usize,
-                        )
-                    };
-
-                    let pixels = Pixels::new(buf.to_vec(), width, height);
-
-                    match tx.send(Box::new(pixels)) {
-                        Err(err) => {
-                            println!("desktopduplication loop transmit error {}", err);
-                        }
-                        _ => (),
-                    }
-
-                    last_frame = Instant::now();
-
-                    unsafe {
-                        devicecontext.Unmap(
-                            cpu_texture.as_raw() as *mut d3d11::ID3D11Resource,
-                            subresource,
-                        )
-                    };
-
-                    println!("got new frame");
-                }
-
-                // if let Err(err) = res {
-                //     println!("error in desktop application loop {:?}", err)
-                // }
-
-                let success = unsafe { output_duplication.Release() };
 
                 if success != 0x0 {
-                    println!("OuputDuplication Release Error {:x}", success);
-                    return Err(ServiceError::WindowsGetLastError(success as i32));
+                    // need to be able to restart output duplication api
+
+                    match success as u32 {
+                        0x887A0027 => {
+                            //DXGI_ERROR_WAIT_TIMEOUT
+                            thread::sleep(Duration::from_millis(2));
+                            continue;
+                        }
+                        _ => {
+                            println!("AquireFrame Error {:x}", success);
+                            continue;
+                        }
+                    }
+                    //return Err(ServiceError::WindowsGetLastError(success));
                 }
 
-                Ok(())
-                */
+                if dxgi_outdupl_frame_info.AccumulatedFrames < 1 {
+                    //no frame available wait before retrying
+                    //println!("No accumalated frames");
+                    thread::sleep(Duration::from_millis(2));
+
+                    continue;
+                }
+
+                let dxgi_resource = unsafe { ComPtr::from_raw(dxgi_resource) };
+
+                let gpu_texture: ComPtr<d3d11::ID3D11Texture2D> = match dxgi_resource.cast() {
+                    Ok(texture) => texture,
+                    Err(err) => {
+                        println!("ID3D11Texture2D Error {:x}", err);
+                        //return Err(ServiceError::WindowsGetLastError(err));
+                        continue;
+                    }
+                };
+
+                // get cpu compatible texture
+                if compatible_texture.is_none() {
+                    compatible_texture = match CompatibleCPUTexture2D::create(&dev, &gpu_texture) {
+                        Ok(par) => Some(par),
+                        Err(f) => {
+                            println!("CompatibleCPUTexture2D {:?}", f);
+                            continue;
+                            //return Err(ServiceError::WindowsGetLastError(f as i32));
+                        }
+                    };
+                }
+
+                let (cpu_texture, width, height) = compatible_texture.as_ref().unwrap().clone();
+
+                // copy texture from GPU texture to CPU texture
+                unsafe {
+                    devctx.CopyResource(
+                        gpu_texture.as_raw() as *mut d3d11::ID3D11Resource,
+                        cpu_texture.as_raw() as *mut d3d11::ID3D11Resource,
+                    )
+                }
+
+                let success = unsafe {
+                    devctx.Map(
+                        cpu_texture.as_raw() as *mut d3d11::ID3D11Resource,
+                        subresource,
+                        d3d11::D3D11_MAP_READ,
+                        0,
+                        &mut mapped_resource,
+                    )
+                };
+
+                if success != 0x0 {
+                    println!("Map Error {:x}", success);
+                    continue;
+                }
+
+                let byte_size = |x| x * mem::size_of::<u8>() / mem::size_of::<u8>();
+
+                let stride = mapped_resource.RowPitch as usize / mem::size_of::<u8>();
+                let byte_stride = byte_size(stride);
+
+                let buf = unsafe {
+                    slice::from_raw_parts(
+                        mapped_resource.pData as *const u8,
+                        byte_stride * height as usize,
+                    )
+                };
+
+                let pixels = Pixels::new(buf.to_vec(), width, height);
+
+                match tx.send(Box::new(pixels)) {
+                    Err(err) => {
+                        println!("desktopduplication loop transmit error {}", err);
+                    }
+                    _ => (),
+                }
+
+                last_frame = Instant::now();
+
+                unsafe {
+                    devctx.Unmap(
+                        cpu_texture.as_raw() as *mut d3d11::ID3D11Resource,
+                        subresource,
+                    )
+                };
             }
+
+            let success = unsafe { outdup.Release() };
+
+            if success != 0x0 {
+                println!("OuputDuplication Release Error {:x}", success);
+                //return Err(ServiceError::WindowsGetLastError(success as i32));
+            }
+
+            success
         });
 
         self.handle = Some(handle);
-
-        println!("handle desktopduplication");
         Ok(())
     }
     fn stop(&mut self) {
         //stop loop
-        println!("setting conditional to false");
+
         *self.sentinal.lock().unwrap() = false;
-        //println!("set conditional to false");
     }
     fn join(&mut self) {
         // take ownership of handle and
-        println!("joining desktopduplication");
-        let res = self.handle.take().unwrap().join();
 
+        let res = self.handle.take().unwrap().join().unwrap();
+        println!("join result: {}", res);
         // let res_outer = match res.unwrap() {
         //     Ok(inner) => inner,
         //     Err(e) => {
