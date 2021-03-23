@@ -98,8 +98,9 @@ impl Services {
         for (k, v) in self.services.iter_mut() {
             println!("trying to stop service {:?}", k);
             v.stop()?;
-            v.join();
             println!("service stopped {:?}", k);
+            v.join();
+            println!("service joined {:?}", k);
         }
 
         Ok(())

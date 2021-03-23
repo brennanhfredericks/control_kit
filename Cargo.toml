@@ -12,3 +12,5 @@ bindings = {path="bindings"}
 [target.'cfg(windows)'.dependencies]
 winapi= {version="0.3.9", features = ["d3d11","dxgi1_2","d3dcommon","dxgiformat","winerror","winuser"]}
 wio = "0.2.2"
+dxgcap = "0.2.4"
+image = "0.23.14"

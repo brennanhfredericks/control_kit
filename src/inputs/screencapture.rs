@@ -1,6 +1,8 @@
 use crate::{Input, InputProcessMethod, Process, ServiceError};
 use std::sync::mpsc::Sender;
 
+//use dxgcap::DXGIManager;
+
 #[path = "screencapture/desktopduplication.rs"]
 mod desktopduplication;
 use desktopduplication::DesktopDuplication;
