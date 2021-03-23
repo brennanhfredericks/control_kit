@@ -1,3 +1,4 @@
+use control::screencapture::ScreenCapture;
 use control::synchronization::Synchronization;
 use control::telemetry::{SelectGame, Telemetry};
 use control::{ServiceType, Services};
@@ -48,6 +49,58 @@ fn telemetry_service_shutdown_when_completed() {
     cap_sess.block_until_telemetry_finished().unwrap();
 
     //cap_sess.stop_all_services();
+}
+
+#[test]
+fn telemetry_and_screencapture_service_shutdown_when_completed() {
+    //game selection
+    let sel_game = SelectGame::ETS2;
+    // setup telemetry
+    let mut ets2_telemetry = Telemetry::via_shared_memory(sel_game);
+    let mut dd_screencapture = ScreenCapture::via_desktopduplication().unwrap();
+
+    let sync = Synchronization::new();
+
+    let tx_telemetry = sync.get_input_transmitter();
+    let tx_screencapture = sync.get_input_transmitter();
+
+    ets2_telemetry.set_transmitter(tx_telemetry);
+    dd_screencapture.set_transmitter(tx_screencapture);
+
+    let mut cap_sess = Services::new();
+
+    // cap_sess
+    //     .add_service(ServiceType::SynchronizeInputs, Box::new(sync))
+    //     .unwrap();
+
+    let reader = ETS2Emulation::start_with_stdout();
+
+    thread::sleep(Duration::from_secs(1));
+    cap_sess
+        .add_service(ServiceType::TelemetryInput, Box::new(ets2_telemetry))
+        .unwrap();
+
+    cap_sess
+        .add_service(ServiceType::ScreenCaptureInput, Box::new(dd_screencapture))
+        .unwrap();
+
+    let mut i: u64 = 0;
+    for line in reader.lines() {
+        let x = line.expect("irrelevant error - may ignore");
+        let numbers: Vec<u64> = x
+            .split('-')
+            .map(|val| str::parse::<u64>(val).unwrap())
+            .collect();
+
+        assert!(i == numbers[0]);
+        i += 1;
+    }
+
+    assert!(i == 23182);
+
+    cap_sess.block_until_telemetry_finished().unwrap();
+
+    cap_sess.stop_all_services();
 }
 
 #[test]
