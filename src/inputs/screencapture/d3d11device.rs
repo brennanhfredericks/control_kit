@@ -1,4 +1,5 @@
 //use std::rc::Rc;
+use std::sync::Arc;
 use std::{mem, ptr};
 use winapi::shared::dxgiformat;
 use winapi::um::{d3d11, d3dcommon};
@@ -9,8 +10,8 @@ use wio::com::ComPtr;
 mod capture_errors;
 use capture_errors::CaptureError;
 pub struct D3D11Device {
-    device: ComPtr<d3d11::ID3D11Device>,
-    devicecontext: ComPtr<d3d11::ID3D11DeviceContext>,
+    device: Arc<ComPtr<d3d11::ID3D11Device>>,
+    devicecontext: Arc<ComPtr<d3d11::ID3D11DeviceContext>>,
 }
 
 impl D3D11Device {
@@ -42,17 +43,17 @@ impl D3D11Device {
             unsafe { ComPtr::from_raw(devicecontext) };
 
         Ok(D3D11Device {
-            device,
-            devicecontext,
+            device: Arc::new(device),
+            devicecontext: Arc::new(devicecontext),
         })
     }
 
-    pub fn get_device(&self) -> &ComPtr<d3d11::ID3D11Device> {
-        &self.device
+    pub fn get_device(&self) -> Arc<ComPtr<d3d11::ID3D11Device>> {
+        Arc::clone(&self.device)
     }
 
-    pub fn get_device_context(&self) -> &ComPtr<d3d11::ID3D11DeviceContext> {
-        &self.devicecontext
+    pub fn get_device_context(&self) -> Arc<ComPtr<d3d11::ID3D11DeviceContext>> {
+        Arc::clone(&self.devicecontext)
     }
 }
 

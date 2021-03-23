@@ -22,6 +22,7 @@ impl ScreenCapture {
             Err(err) => return Err(ServiceError::WindowsGetLastError(err as i32)),
         };
 
+        //let d = *d_device.get_device();
         let screencapture_input =
             match DesktopDuplication::new(d_device.get_device(), d_device.get_device_context()) {
                 Ok(dd) => dd,

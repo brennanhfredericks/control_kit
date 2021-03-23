@@ -50,9 +50,9 @@ impl Input for Pixels {
 pub struct DesktopDuplication {
     //dxgi_device: ComPtr<dxgi1_2::IDXGIDevice2>,
     //dxgi_output: ComPtr<dxgi1_2::IDXGIOutput1>,
-    dxgi_output_duplication: Option<ComPtr<dxgi1_2::IDXGIOutputDuplication>>,
-    device: Option<ComPtr<d3d11::ID3D11Device>>, //needed to copy data between textures
-    devicecontext: Option<ComPtr<d3d11::ID3D11DeviceContext>>,
+    dxgi_output_duplication: Option<Arc<ComPtr<dxgi1_2::IDXGIOutputDuplication>>>,
+    device: Option<Arc<ComPtr<d3d11::ID3D11Device>>>, //needed to copy data between textures
+    devicecontext: Option<Arc<ComPtr<d3d11::ID3D11DeviceContext>>>,
     transmitter: Option<Sender<Box<dyn Input + Send>>>,
     handle: Option<thread::JoinHandle<()>>,
     sentinal: Arc<Mutex<bool>>,
@@ -60,8 +60,8 @@ pub struct DesktopDuplication {
 
 impl DesktopDuplication {
     pub fn new(
-        device: &ComPtr<d3d11::ID3D11Device>,
-        devicecontext: &ComPtr<d3d11::ID3D11DeviceContext>,
+        device: Arc<ComPtr<d3d11::ID3D11Device>>,
+        devicecontext: Arc<ComPtr<d3d11::ID3D11DeviceContext>>,
     ) -> Result<DesktopDuplication, CaptureError> {
         // get DXGI Device from ID3D11Device
         let dxgi_device: ComPtr<dxgi1_2::IDXGIDevice2> = match device.cast() {
@@ -76,7 +76,7 @@ impl DesktopDuplication {
         let mut dxgi_adapter = ptr::null_mut();
 
         let success = unsafe { dxgi_device.GetAdapter(&mut dxgi_adapter) };
-
+        println!("GetAdapter: {:x}", success);
         //check if operation complete succefully
         if success != 0x0 {
             // add logging
@@ -91,7 +91,7 @@ impl DesktopDuplication {
 
         //use DXGI Adapter to retrieve primary monitor (is at index zero)
         let success = unsafe { dxgi_adapter.EnumOutputs(0, &mut dxgi_output) };
-
+        println!("EnumOutputs: {:x}", success);
         if success != 0x0 {
             //add logging
             return Err(CaptureError::from_win_error(success));
@@ -116,7 +116,7 @@ impl DesktopDuplication {
                 &mut dxgi_out_dup,
             )
         };
-
+        println!("DuplicateOutput: {:x}", success);
         if success != 0x0 {
             //add error log
             return Err(CaptureError::from_win_error(success));
@@ -127,9 +127,9 @@ impl DesktopDuplication {
         Ok(DesktopDuplication {
             //dxgi_device,
             //dxgi_output,
-            dxgi_output_duplication: Some(dxgi_output_duplication),
-            device: Some(device.clone()),
-            devicecontext: Some(devicecontext.clone()),
+            dxgi_output_duplication: Some(Arc::new(dxgi_output_duplication)),
+            device: Some(device),
+            devicecontext: Some(devicecontext),
             transmitter: None,
             handle: None,
             sentinal: Arc::new(Mutex::new(false)),
@@ -151,16 +151,20 @@ impl InputProcessMethod for DesktopDuplication {
         let sentinal = Arc::clone(&self.sentinal);
 
         // take value
-        let device = self.device.take().unwrap().as_raw() as usize;
-        let devicecontext = self.devicecontext.take().unwrap().as_raw() as usize;
+        let device = self.device.take().unwrap(); //.unwrap().as_raw() as usize;
+        let devicecontext = self.devicecontext.take().unwrap(); //.as_raw() as usize;
         let tx = self.transmitter.take().unwrap();
-        let output_duplication = self.dxgi_output_duplication.take().unwrap().as_raw() as usize;
+        let output_duplication = self.dxgi_output_duplication.take().unwrap(); //.as_raw() as usize;
 
         let handle = thread::spawn(move || {
             // needed to pass pointers between
 
             // let output_duplication: ComPtr<dxgi1_2::IDXGIOutputDuplication> =
             //     unsafe { ComPtr::from_raw(output_duplication as *mut _) };
+
+            // unsafe {
+            //     output_duplication.Release();
+            // }
 
             //let device: ComPtr<d3d11::ID3D11Device> = unsafe { ComPtr::from_raw(device as *mut _) };
 
@@ -171,11 +175,11 @@ impl InputProcessMethod for DesktopDuplication {
                 *sentinal.lock().unwrap() = true;
             }
 
-            // let mut compatible_texture: Option<(ComPtr<d3d11::ID3D11Texture2D>, u32, u32)> = None;
-            // let mut dxgi_outdupl_frame_info: dxgi1_2::DXGI_OUTDUPL_FRAME_INFO =
-            //     unsafe { mem::zeroed() };
-            // let mut mapped_resource: d3d11::D3D11_MAPPED_SUBRESOURCE = unsafe { mem::zeroed() };
-            // let subresource = d3d11::D3D11CalcSubresource(0, 0, 0);
+            let mut compatible_texture: Option<(ComPtr<d3d11::ID3D11Texture2D>, u32, u32)> = None;
+            let mut dxgi_outdupl_frame_info: dxgi1_2::DXGI_OUTDUPL_FRAME_INFO =
+                unsafe { mem::zeroed() };
+            let mut mapped_resource: d3d11::D3D11_MAPPED_SUBRESOURCE = unsafe { mem::zeroed() };
+            let subresource = d3d11::D3D11CalcSubresource(0, 0, 0);
 
             // //let mut dxgi_resource = ptr::null_mut();
 
